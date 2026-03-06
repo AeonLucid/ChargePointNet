@@ -1,4 +1,4 @@
-﻿using System.IO.Ports;
+﻿using ChargePointNet.Core.Net;
 using Serilog;
 
 namespace ChargePointNet.Core.Protocols.Max;
@@ -10,15 +10,15 @@ public class MaxModem : IModem
 {
     private static readonly ILogger Logger = Log.ForContext<MaxModem>();
     
-    private readonly SerialPort _port;
+    private readonly IDevice _device;
     private readonly MaxModemBus _bus;
 
     private bool _disposed;
 
-    public MaxModem(SerialPort port)
+    public MaxModem(IDevice device)
     {
-        _port = port;
-        _bus = new MaxModemBus(port);
+        _device = device;
+        _bus = new MaxModemBus(device);
     }
     
     public bool Connected => _bus.Connected;

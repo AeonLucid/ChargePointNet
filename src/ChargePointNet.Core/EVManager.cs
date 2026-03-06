@@ -1,4 +1,4 @@
-﻿using System.IO.Ports;
+﻿using ChargePointNet.Core.Net;
 using ChargePointNet.Core.Protocols;
 using ChargePointNet.Core.Protocols.Max;
 using Serilog;
@@ -23,13 +23,13 @@ public class EVManager
         return _modems.ContainsKey(portName) || _boxes.ContainsKey(portName);
     }
     
-    public void RegisterDevice(SerialPort port, EVProtocol protocol)
+    public void RegisterDevice(IDevice device, EVProtocol protocol)
     {
         switch (protocol)
         {
             case EVProtocol.Max:
-                _modems[port.PortName] = new MaxModem(port);
-                _modems[port.PortName].Start();
+                _modems[device.Identifier] = new MaxModem(device);
+                _modems[device.Identifier].Start();
                 break;
             default:
                 throw new NotSupportedException($"Protocol {protocol} is not supported");
