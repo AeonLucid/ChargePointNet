@@ -6,16 +6,18 @@ namespace ChargePointNet.Core.Protocols.Max;
 public class MaxCharger : IChargeBox
 {
     private readonly MaxModem _modem;
-    private readonly MaxModemBus _bus;
 
-    internal MaxCharger(byte address, MaxModem modem, MaxModemBus bus)
+    internal MaxCharger(MaxModem modem)
     {
-        Address = address;
         _modem = modem;
-        _bus = bus;
     }
+
+    public required byte Address { get; init; }
+    public required string Serial { get; init; }
+    public required string HardwareVersion { get; init; }
+    public required string FirmwareVersion { get; init;}
     
-    public byte Address { get; }
+    public string HardwareGeneration => HardwareVersion[^2..];
 
     public void Initialize()
     {

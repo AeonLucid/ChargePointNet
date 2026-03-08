@@ -51,7 +51,7 @@ public class MaxModem : IModem
     {
         _bus.Stop();
     }
-
+    
     internal void SendTo(byte address, MaxCommand command, IMaxPacketData data)
     {
         _bus.Send(new MaxPacket
@@ -63,8 +63,25 @@ public class MaxModem : IModem
         });
     }
 
-    private MaxCharger? AddCharger()
+    internal void SendBroadcast(MaxCommand command, IMaxPacketData data)
     {
+        _bus.Send(new MaxPacket
+        {
+            Destination = ADDRESS_BROADCAST,
+            Source = ADDRESS_MODEM,
+            Command = command,
+            Data = data
+        });
+    }
+
+    private MaxCharger? AddCharger(string? serial, string? hardwareVersion, string? firmwareVersion)
+    {
+        if (serial == null || hardwareVersion == null || firmwareVersion == null)
+        {
+            Logger.Debug("Failed to add charger, missing fields");
+            return null;
+        }
+        
         byte? address = null;
         
         for (var i = ADDRESS_CB_MIN; i <= ADDRESS_CB_MAX; i++)
@@ -83,8 +100,14 @@ public class MaxModem : IModem
             Logger.Warning("No more addresses available for new charger");
             return null;
         }
-        
-        var charger = new MaxCharger(address.Value, this, _bus);
+
+        var charger = new MaxCharger(this)
+        {
+            Address = address.Value,
+            Serial = serial,
+            HardwareVersion = hardwareVersion,
+            FirmwareVersion = firmwareVersion
+        };
         
         if (!_chargers.TryAdd(address.Value, charger))
         {
@@ -100,31 +123,25 @@ public class MaxModem : IModem
 
     private Task OnPacketReceived(MaxPacket packet)
     {
-        if (packet.Data is CB_REGISTER_REQUEST cbRegisterRequest)
+        if (packet.Data is CB_REGISTER_REQUEST regRequest)
         {
-            var charger = AddCharger();
+            var charger = AddCharger(regRequest.Serial, regRequest.HardwareVersion, regRequest.FirmwareVersion);
             if (charger == null)
             {
                 Logger.Warning("Failed to add charger for CB_REGISTER_REQUEST from {Source}", packet.Source);
                 return Task.CompletedTask;
             }
-            
-            _bus.Send(new MaxPacket
+
+            SendBroadcast(MaxCommand.CB_REGISTER, new CB_REGISTER_RESPONSE
             {
-                Destination = packet.Source,
-                Source = ADDRESS_MODEM,
-                Command = MaxCommand.CB_REGISTER,
-                Data = new CB_REGISTER_RESPONSE
-                {
-                    Serial = cbRegisterRequest.Serial,
-                    Address = charger.Address,
-                    HardwareGeneration = cbRegisterRequest.HardwareVersion?[..2]
-                }
+                Serial = charger.Serial,
+                Address = charger.Address,
+                HardwareGeneration = charger.HardwareGeneration
             });
-            
+
             charger.Initialize();
         }
-        
+
         return Task.CompletedTask;
     }
 
