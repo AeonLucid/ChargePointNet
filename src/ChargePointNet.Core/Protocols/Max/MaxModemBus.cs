@@ -1,6 +1,7 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO.Pipelines;
+using System.Net.Sockets;
 using ChargePointNet.Core.Net;
 using ChargePointNet.Core.Protocols.Max.Packets;
 using Serilog;
@@ -93,13 +94,17 @@ internal class MaxModemBus : IDisposable
                 }
             }
         }
+        catch (SocketException e) when (e.SocketErrorCode == SocketError.ConnectionReset)
+        {
+            Logger.Warning("{Device}: Connection closed by remote", _device);
+        }
         catch (Exception e)
         {
-            Logger.Error(e, "Error in read/write loop from device {PortName}", _device.Identifier);
+            Logger.Error(e, "{Device}: Error in read/write loop", _device);
         }
         finally
         {
-            Logger.Verbose("Bus read/write loop stopped for device {PortName}", _device.Identifier);
+            Logger.Verbose("{Device}: Bus read/write loop stopped", _device);
             
             await _receivePipe.Writer.CompleteAsync();
             
