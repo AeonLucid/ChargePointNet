@@ -56,4 +56,9 @@ public class SerialDevice : IDevice
     {
         _port.Dispose();
     }
+
+    public override string ToString()
+    {
+        return $"(SerialDevice: {Identifier})";
+    }
 }

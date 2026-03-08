@@ -2,11 +2,12 @@
 using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using ChargePointNet.Core.Net;
+using ChargePointNet.Core.Protocols.Max.Packets;
 using Serilog;
 
 namespace ChargePointNet.Core.Protocols.Max;
 
-public class MaxModemBus : IDisposable
+internal class MaxModemBus : IDisposable
 {
     private static readonly ILogger Logger = Log.ForContext<MaxModemBus>();
     
@@ -28,6 +29,7 @@ public class MaxModemBus : IDisposable
     }
 
     public bool Connected => _device.Connected && _connectionTask != null && !_stopped && !_disposed;
+    public Func<MaxPacket, Task>? OnPacketReceived { get; set; }
     
     public void Send(MaxPacket packet)
     {
@@ -55,6 +57,7 @@ public class MaxModemBus : IDisposable
         }
 
         _stopped = true;
+        _outBuffer.Clear();
         
         try
         {
@@ -126,7 +129,34 @@ public class MaxModemBus : IDisposable
     {
         while (_outBuffer.TryDequeue(out var packet))
         {
-            await _device.WriteAsync(packet.GetData());
+            var packetLen = MaxPacketFrame.MinPacketLength + (packet.Data?.Size() ?? 0);
+            
+            using var buffer = MemoryPool<byte>.Shared.Rent(packetLen);
+
+            var packetBuffer = buffer.Memory.Slice(0, packetLen);
+            var packetPayload = buffer.Memory.Slice(1, packetLen - 7);
+
+            if (!MaxPacketFrame.TryWritePacketPayload(packetPayload, packet))
+            {
+                Logger.Warning("{Device}: Failed to write packet command 0x{Packet:X2}", _device, packet.Command);
+                continue;
+            }
+
+            if (!MaxPacketFrame.TryWritePacketFrame(packetBuffer))
+            {
+                Logger.Warning("{Device}: Failed to write packet frame command 0x{Packet:X2}", _device, packet.Command);
+                continue;
+            }
+
+            if (!MaxPacketFrame.TryReadPacketFrame(new ReadOnlySequence<byte>(packetBuffer), out _, out var error))
+            {
+                Logger.Warning("{Device}: Failed to validate packet frame command 0x{Packet:X2}: {Error}", _device, packet.Command, error);
+                continue;
+            }
+            
+            Logger.Debug("{Device}: Sending to 0x{Address:X2} {Command} ({@Data})", _device, packet.Destination, packet.Command, packet.Data);
+            
+            await _device.WriteAsync(packetBuffer);
         }
     }
 
@@ -148,11 +178,35 @@ public class MaxModemBus : IDisposable
 
                 try
                 {
-                    while (TryReadPacket(ref buffer, out var packet))
+                    while (MaxPacketFrame.TryFindPacketFrame(ref buffer, out var frame))
                     {
-                        Logger.Verbose("Received packet from {Identifier}: {Packet}", _device.Identifier, Convert.ToHexStringLower(packet.ToArray()));
+                        Logger.Verbose("{Device}: Received packet {Packet}", _device, Convert.ToHexStringLower(frame.ToArray()));
+
+                        if (!MaxPacketFrame.TryReadPacketFrame(frame, out var payload, out var error))
+                        {
+                            Logger.Warning("{Device}: Failed to read packet payload: {Error}", _device, error);
+                            continue;
+                        }
+
+                        if (!MaxPacketFrame.TryReadPacketPayload(payload, out var packet))
+                        {
+                             Logger.Warning("{Device}: Failed to read packet: {Error}", _device, error);
+                             continue;
+                        }
                         
-                        // TODO: Verify packet checksum / parity
+                        Logger.Debug("{Device}: Received from 0x{Address:X2} {Command} {@Data}", _device, packet.Source, packet.Command, packet.Data);
+
+                        if (OnPacketReceived != null)
+                        {
+                            try
+                            {
+                                await OnPacketReceived(packet);
+                            }
+                            catch (Exception e)
+                            {
+                                Logger.Error(e, "{Device}: Error processing packet: {@Packet}", _device, packet);
+                            }
+                        }
                     }
 
                     if (result.IsCompleted)
@@ -180,43 +234,6 @@ public class MaxModemBus : IDisposable
         }
     }
 
-    /// <summary>
-    ///     Valid packet frame starts with 0x02 and ends with 0x03FF.
-    /// </summary>
-    private static bool TryReadPacket(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> packet)
-    {
-        // TODO: Discard corrupted packets
-        
-        var reader = new SequenceReader<byte>(buffer);
-        
-        // Find 0x02.
-        if (!reader.TryAdvanceTo(0x02, false))
-        {
-            packet = default;
-            return false;
-        }
-        
-        var startPos = reader.Position;
-
-        // Find 0x03.
-        if (!reader.TryAdvanceTo(0x03))
-        {
-            packet = default;
-            return false;
-        }
-        
-        // Confirm 0xFF is after 0x03.
-        if (!reader.TryRead(out var value) && value != 0xFF)
-        {
-            packet = default;
-            return false;
-        }
-        
-        packet = buffer.Slice(startPos, reader.Position);
-        buffer = buffer.Slice(packet.End);
-        return true;
-    }
-
     public void Dispose()
     {
         if (_disposed)
@@ -225,6 +242,7 @@ public class MaxModemBus : IDisposable
         }
         
         _disposed = true;
+        _outBuffer.Clear();
         _device.Dispose();
     }
 }

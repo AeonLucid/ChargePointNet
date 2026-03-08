@@ -3,7 +3,7 @@
 /// <summary>
 ///     Represents a modem that also is a <see cref="IChargeBox"/> 
 /// </summary>
-public interface IModem : IDisposable
+internal interface IModem : IDisposable
 {
     bool Connected { get; }
     

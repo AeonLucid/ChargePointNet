@@ -67,6 +67,6 @@ public class NetworkDevice : IDevice
 
     public override string ToString()
     {
-        return $"NetworkDevice: {Identifier}";
+        return $"(NetworkDevice: {Identifier})";
     }
 }
