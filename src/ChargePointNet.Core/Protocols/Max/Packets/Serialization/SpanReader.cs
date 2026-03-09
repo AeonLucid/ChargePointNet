@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -58,6 +59,34 @@ internal ref struct SpanReader
         }
         
         value = output[0];
+        return true;
+    }
+    
+    public bool TryReadU16(out ushort value)
+    {
+        Span<byte> output = stackalloc byte[2];
+        
+        if (!TryReadPrimitive(output))
+        {
+            value = 0;
+            return false;
+        }
+        
+        value = BinaryPrimitives.ReadUInt16BigEndian(output);
+        return true;
+    }
+    
+    public bool TryReadU32(out uint value)
+    {
+        Span<byte> output = stackalloc byte[4];
+        
+        if (!TryReadPrimitive(output))
+        {
+            value = 0;
+            return false;
+        }
+        
+        value = BinaryPrimitives.ReadUInt32LittleEndian(output);
         return true;
     }
 

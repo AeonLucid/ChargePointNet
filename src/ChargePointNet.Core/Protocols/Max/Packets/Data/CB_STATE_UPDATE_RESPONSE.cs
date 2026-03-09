@@ -2,20 +2,20 @@
 
 namespace ChargePointNet.Core.Protocols.Max.Packets.Data;
 
-internal class CONNECTION_STATE_CHANGED_REQUEST : IMaxPacketData
+internal class CB_STATE_UPDATE_RESPONSE : IMaxPacketData
 {
-    public uint HeartbeatInterval { get; set; }
-    public byte LedEnable { get; set; }
+    public uint SessionId { get; set; }
+    public uint Timestamp { get; set; }
     
     public int Size()
     {
-        return 10;
+        return 16;
     }
 
     public void Serialize(ref SpanWriter writer)
     {
-        writer.WriteU32Hex(HeartbeatInterval);
-        writer.WriteU8Hex(LedEnable);
+        writer.WriteU32Hex(SessionId);
+        writer.WriteU32Hex(Timestamp);
     }
 
     public bool Deserialize(ref SpanReader reader)

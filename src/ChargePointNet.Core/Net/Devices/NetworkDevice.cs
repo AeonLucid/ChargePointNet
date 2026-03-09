@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using ChargePointNet.Core.Protocols;
 
 namespace ChargePointNet.Core.Net.Devices;
 
@@ -10,16 +11,18 @@ public class NetworkDevice : IDevice
 
     private bool _reachedEndOfStream;
 
-    public NetworkDevice(IPEndPoint endPoint, Socket socket)
+    public NetworkDevice(IPEndPoint endPoint, Socket socket, EVProtocol protocol)
     {
         _endPoint = endPoint;
         _socket = socket;
         
         Identifier = _endPoint.ToString();
+        Protocol = protocol;
     }
     
     public string Identifier { get; }
     public bool Connected => _socket.Connected && !_reachedEndOfStream;
+    public EVProtocol Protocol { get; }
 
     public async Task<bool> ConnectAsync()
     {

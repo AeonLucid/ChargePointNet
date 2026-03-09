@@ -6,11 +6,19 @@ public class DevicesConfig
 {
     public const string Section = "Devices";
 
-    public Dictionary<string, EVProtocol> Ports { get; set; } = [];
-    public List<DeviceEndpoint> Endpoints { get; set; } = [];
+    public List<SerialDevice> Serial { get; set; } = [];
+    public List<NetworkDevice> Network { get; set; } = [];
 
-    public class DeviceEndpoint
+    public class SerialDevice
     {
+        public required bool Enabled { get; set; }
+        public required string Port { get; set; }
+        public required EVProtocol Protocol { get; set; }
+    }
+    
+    public class NetworkDevice
+    {
+        public required bool Enabled { get; set; }
         public required string IpAddress { get; set; }
         public required int Port { get; set; }
         public required EVProtocol Protocol { get; set; }

@@ -31,7 +31,7 @@ internal ref struct SpanWriter
     }
     
     /// <summary>
-    ///     Write byte as hex string.
+    ///     Write byte as hex.
     /// </summary>
     public void WriteU8Hex(byte value)
     {
@@ -41,7 +41,23 @@ internal ref struct SpanWriter
         Advance(2);
     }
 
-    public void WriteU32Hex(int value)
+    /// <summary>
+    ///     Write ushort as hex.
+    /// </summary>
+    public void WriteU16Hex(ushort value)
+    {
+        CheckBounds(4);
+        _data[Position] = ToHexUpper((byte)((value >> 12) & 0x0F));
+        _data[Position + 1] = ToHexUpper((byte)((value >> 8) & 0x0F));
+        _data[Position + 2] = ToHexUpper((byte)((value >> 4) & 0x0F));
+        _data[Position + 3] = ToHexUpper((byte)(value & 0x0F));
+        Advance(4);
+    }
+
+    /// <summary>
+    ///     Write uint as hex.
+    /// </summary>
+    public void WriteU32Hex(uint value)
     {
         CheckBounds(8);
         _data[Position] = ToHexUpper((byte)((value >> 28) & 0x0F));

@@ -12,13 +12,6 @@ namespace ChargePointNet.Core.Protocols.Max;
 public class MaxModem : IModem
 {
     private static readonly ILogger Logger = Log.ForContext<MaxModem>();
-
-    private const byte ADDRESS_NEW = 0x00;
-    private const byte ADDRESS_CB_MIN = 0x01;
-    private const byte ADDRESS_CB_MAX = 0x01 + 20 - 1;
-    private const byte ADDRESS_MODEM = 0x80;
-    private const byte ADDRESS_BROADCAST = 0xBC;
-    private const byte ADDRESS_CHARGE_STATION = 0xFD;
     
     private readonly IDevice _device;
     private readonly MaxModemBus _bus;
@@ -41,8 +34,8 @@ public class MaxModem : IModem
         _bus.Start();
         _bus.Send(new MaxPacket
         {
-            Destination = ADDRESS_BROADCAST,
-            Source = ADDRESS_MODEM,
+            Destination = MaxAddress.BROADCAST,
+            Source = MaxAddress.MODEM,
             Command = MaxCommand.RESTART_REGISTRATION
         });
     }
@@ -57,7 +50,7 @@ public class MaxModem : IModem
         _bus.Send(new MaxPacket
         {
             Destination = address,
-            Source = ADDRESS_MODEM,
+            Source = MaxAddress.MODEM,
             Command = command,
             Data = data
         });
@@ -67,8 +60,8 @@ public class MaxModem : IModem
     {
         _bus.Send(new MaxPacket
         {
-            Destination = ADDRESS_BROADCAST,
-            Source = ADDRESS_MODEM,
+            Destination = MaxAddress.BROADCAST,
+            Source = MaxAddress.MODEM,
             Command = command,
             Data = data
         });
@@ -84,7 +77,7 @@ public class MaxModem : IModem
         
         byte? address = null;
         
-        for (var i = ADDRESS_CB_MIN; i <= ADDRESS_CB_MAX; i++)
+        for (var i = MaxAddress.CB_MIN; i <= MaxAddress.CB_MAX; i++)
         {
             if (_chargers.ContainsKey(i))
             {
@@ -140,8 +133,24 @@ public class MaxModem : IModem
             });
 
             charger.Initialize();
+            return Task.CompletedTask;
         }
 
+        if (packet.Source >= MaxAddress.CB_MIN && packet.Source <= MaxAddress.CB_MAX)
+        {
+            if (_chargers.TryGetValue(packet.Source, out var charger))
+            {
+                charger.OnPacketReceived(packet);
+            }
+            else
+            {
+                Logger.Warning("Received packet for unregistered charger at address {Address}", packet.Source);
+            }
+            
+            return Task.CompletedTask;
+        }
+
+        Logger.Warning("Received packet for unknown address {Address}", packet.Source);
         return Task.CompletedTask;
     }
 

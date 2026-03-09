@@ -1,4 +1,5 @@
 using System.IO.Ports;
+using ChargePointNet.Core.Protocols;
 
 namespace ChargePointNet.Core.Net.Devices;
 
@@ -10,13 +11,15 @@ public class SerialDevice : IDevice
     
     private readonly SerialPort _port;
 
-    public SerialDevice(SerialPort port)
+    public SerialDevice(SerialPort port, EVProtocol protocol)
     {
         _port = port;
+        Protocol = protocol;
     }
     
     public string Identifier => _port.PortName;
     public bool Connected => _port.IsOpen;
+    public EVProtocol Protocol { get; }
 
     public Task<bool> ConnectAsync()
     {
@@ -35,7 +38,11 @@ public class SerialDevice : IDevice
 
     public async Task<int> ReadAsync(Memory<byte> buffer)
     {
-        // TODO: Check if blocking
+        if (_port.BytesToRead == 0)
+        {
+            return 0;
+        }
+        
         var result = await _port.BaseStream.ReadAsync(buffer);
         await Task.Delay(BusIdleDelay);
         return result;

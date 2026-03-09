@@ -185,17 +185,17 @@ internal class MaxModemBus : IDisposable
                 {
                     while (MaxPacketFrame.TryFindPacketFrame(ref buffer, out var frame))
                     {
-                        Logger.Verbose("{Device}: Received packet {Packet}", _device, Convert.ToHexStringLower(frame.ToArray()));
-
                         if (!MaxPacketFrame.TryReadPacketFrame(frame, out var payload, out var error))
                         {
                             Logger.Warning("{Device}: Failed to read packet payload: {Error}", _device, error);
+                            Logger.Verbose("{Device}: Packet {Packet}", _device, Convert.ToHexStringLower(frame.ToArray()));
                             continue;
                         }
 
                         if (!MaxPacketFrame.TryReadPacketPayload(payload, out var packet))
                         {
                              Logger.Warning("{Device}: Failed to read packet: {Error}", _device, error);
+                             Logger.Verbose("{Device}: Packet {Packet}", _device, Convert.ToHexStringLower(frame.ToArray()));
                              continue;
                         }
                         

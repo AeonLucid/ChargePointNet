@@ -23,16 +23,16 @@ public class EVManager
         return _modems.ContainsKey(portName) || _boxes.ContainsKey(portName);
     }
     
-    public void RegisterDevice(IDevice device, EVProtocol protocol)
+    public void RegisterDevice(IDevice device)
     {
-        switch (protocol)
+        switch (device.Protocol)
         {
             case EVProtocol.Max:
                 _modems[device.Identifier] = new MaxModem(device);
                 _modems[device.Identifier].Start();
                 break;
             default:
-                throw new NotSupportedException($"Protocol {protocol} is not supported");
+                throw new NotSupportedException($"Protocol {device.Protocol} is not supported");
         }
     }
 

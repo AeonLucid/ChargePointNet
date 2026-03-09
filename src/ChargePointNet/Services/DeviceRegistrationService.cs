@@ -25,7 +25,7 @@ public class DeviceRegistrationService : BackgroundService
         _evManager = evManager;
     }
 
-    private async Task CheckDeviceAsync(IDevice device, EVProtocol protocol)
+    private async Task CheckDeviceAsync(IDevice device)
     {
         if (_evManager.IsRegistered(device.Identifier))
         {
@@ -44,7 +44,7 @@ public class DeviceRegistrationService : BackgroundService
             }
 
             _logger.LogDebug("Opened connection with {Device}", device);
-            _evManager.RegisterDevice(device, protocol);
+            _evManager.RegisterDevice(device);
             
             return;
         }
@@ -76,65 +76,31 @@ public class DeviceRegistrationService : BackgroundService
             // Register new devices.
             var config = _devicesConfig.CurrentValue;
 
-            foreach (var endpoint in config.Endpoints)
+            foreach (var networkDevice in config.Network)
             {
+                if (!networkDevice.Enabled) continue;
+                
                 var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 {
                     Blocking = false
                 };
 
-                var remoteEndpoint = new IPEndPoint(IPAddress.Parse(endpoint.IpAddress), endpoint.Port);
-                var device = new NetworkDevice(remoteEndpoint, socket);
+                var remoteEndpoint = new IPEndPoint(IPAddress.Parse(networkDevice.IpAddress), networkDevice.Port);
+                var device = new NetworkDevice(remoteEndpoint, socket, networkDevice.Protocol);
                 
-                await CheckDeviceAsync(device, endpoint.Protocol);
-                
-                // var portName = endpoint.ToString();
-                //
-                // if (_evManager.IsRegistered(portName))
-                // {
-                //     continue;
-                // }
-                //
-                // // Attempt to open socket.
-                // Socket? socket = null;
-                //
-                // try
-                // {
-                //     socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-                //     {
-                //         Blocking = false
-                //     };
-                //
-                //     await socket.ConnectAsync(new IPEndPoint(IPAddress.Parse(endpoint.IpAddress), endpoint.Port), stoppingToken);
-                //
-                //     _logger.LogDebug("Connected to remote endpoint {Endpoint}", portName);
-                //
-                //     _evManager.RegisterDevice(new NetworkDevice(portName, socket), EVProtocol.Max);
-                //
-                //     socket = null;
-                // }
-                // catch (SocketException)
-                // {
-                //     _logger.LogError("No device detected at endpoint {Endpoint}", endpoint);
-                // }
-                // catch (Exception e)
-                // {
-                //     _logger.LogError(e, "Failed to connect to device at {Endpoint}", endpoint);
-                // }
-                // finally
-                // {
-                //     socket?.Dispose();
-                // }
+                await CheckDeviceAsync(device);
             }
 
-            foreach (var (portName, protocol) in config.Ports)
+            foreach (var serialDevice in config.Serial)
             {
-                var device = new SerialDevice(new SerialPort(portName)
+                if (!serialDevice.Enabled) continue;
+                
+                var device = new SerialDevice(new SerialPort(serialDevice.Port)
                 {
                     BaudRate = 38400
-                });
+                }, serialDevice.Protocol);
                 
-                await CheckDeviceAsync(device, protocol);
+                await CheckDeviceAsync(device);
             }
         } while (await _periodicTimer.WaitForNextTickAsync(stoppingToken));
     }

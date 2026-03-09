@@ -9,7 +9,11 @@ internal static class MaxPacketDataMap
         switch (command)
         {
             case MaxCommand.CB_REGISTER:
-                return destination == 0x80 ? typeof(CB_REGISTER_REQUEST) : typeof(CB_REGISTER_RESPONSE);
+                return destination == MaxAddress.MODEM ? typeof(CB_REGISTER_REQUEST) : typeof(CB_REGISTER_RESPONSE);
+            case MaxCommand.CB_STATE_UPDATE:
+                return destination == MaxAddress.MODEM ? typeof(CB_STATE_UPDATE_REQUEST) : typeof(CB_STATE_UPDATE_RESPONSE);
+            case MaxCommand.CHARGING_STATE:
+                return destination == MaxAddress.MODEM ? typeof(CHARGING_STATE_REQUEST) : typeof(CHARGING_STATE_RESPONSE);
             default:
                 return typeof(UNKNOWN);
         }
