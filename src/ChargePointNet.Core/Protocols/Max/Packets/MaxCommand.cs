@@ -11,6 +11,7 @@
 internal enum MaxCommand : byte
 {
     CB_REGISTER = 0x11,
+    GET_METER_INFO = 0x13,
     CONNECTION_STATE_CHANGED = 0x1B,
     RESTART_REGISTRATION = 0x1E,
     CB_STATE_UPDATE = 0x26,

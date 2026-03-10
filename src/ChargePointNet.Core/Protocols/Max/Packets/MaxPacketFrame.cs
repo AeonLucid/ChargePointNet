@@ -197,14 +197,21 @@ internal static class MaxPacketFrame
             return false;
         }
         
+        
         var commandType = (MaxCommand)command;
+        
+        IHexPacket? packetData = null;
+        
         var packetDataType = MaxPacketDataMap.GetType(destination, source, commandType);
-        var packetData = (IHexPacket)Activator.CreateInstance(packetDataType)!;
-
-        if (!packetData.Deserialize(ref reader))
+        if (packetDataType != null)
         {
-            packet = null;
-            return false;
+            packetData = (IHexPacket)Activator.CreateInstance(packetDataType)!;
+
+            if (!packetData.Deserialize(ref reader))
+            {
+                packet = null;
+                return false;
+            }
         }
         
         packet = new MaxPacket

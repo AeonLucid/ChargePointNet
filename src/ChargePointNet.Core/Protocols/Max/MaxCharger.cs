@@ -29,7 +29,7 @@ public class MaxCharger : IChargeBox
         });
     }
 
-    internal void Send(MaxCommand command, IHexPacket data)
+    internal void Send(MaxCommand command, IHexPacket? data = null)
     {
         _modem.SendTo(Address, command, data);
     }
@@ -51,6 +51,7 @@ public class MaxCharger : IChargeBox
                     Timestamp = MaxUtils.Timestamp()
                 });
             
+                Send(MaxCommand.GET_METER_INFO);
                 // TODO: Get meter info
                 break;
         }

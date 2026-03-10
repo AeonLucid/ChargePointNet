@@ -46,7 +46,7 @@ public class MaxModem : IModem
         _bus.Stop();
     }
     
-    internal void SendTo(byte address, MaxCommand command, IHexPacket data)
+    internal void SendTo(byte address, MaxCommand command, IHexPacket? data = null)
     {
         _bus.Send(new MaxPacket
         {
@@ -57,7 +57,7 @@ public class MaxModem : IModem
         });
     }
 
-    internal void SendBroadcast(MaxCommand command, IHexPacket data)
+    internal void SendBroadcast(MaxCommand command, IHexPacket? data = null)
     {
         _bus.Send(new MaxPacket
         {
