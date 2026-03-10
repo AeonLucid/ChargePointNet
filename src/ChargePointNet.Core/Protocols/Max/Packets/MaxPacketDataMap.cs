@@ -1,4 +1,4 @@
-﻿using ChargePointNet.Core.Protocols.Max.Packets.Data;
+﻿using ChargePointNet.Packets.Max;
 
 namespace ChargePointNet.Core.Protocols.Max.Packets;
 
@@ -6,16 +6,18 @@ internal static class MaxPacketDataMap
 {
     public static Type GetType(byte destination, byte source, MaxCommand command)
     {
-        switch (command)
+        return command switch
         {
-            case MaxCommand.CB_REGISTER:
-                return destination == MaxAddress.MODEM ? typeof(CB_REGISTER_REQUEST) : typeof(CB_REGISTER_RESPONSE);
-            case MaxCommand.CB_STATE_UPDATE:
-                return destination == MaxAddress.MODEM ? typeof(CB_STATE_UPDATE_REQUEST) : typeof(CB_STATE_UPDATE_RESPONSE);
-            case MaxCommand.CHARGING_STATE:
-                return destination == MaxAddress.MODEM ? typeof(CHARGING_STATE_REQUEST) : typeof(CHARGING_STATE_RESPONSE);
-            default:
-                return typeof(UNKNOWN);
-        }
+            MaxCommand.CB_REGISTER => destination == MaxAddress.MODEM
+                ? typeof(CB_REGISTER_REQUEST)
+                : typeof(CB_REGISTER_RESPONSE),
+            MaxCommand.CB_STATE_UPDATE => destination == MaxAddress.MODEM
+                ? typeof(CB_STATE_UPDATE_REQUEST)
+                : typeof(CB_STATE_UPDATE_RESPONSE),
+            MaxCommand.CHARGING_STATE => destination == MaxAddress.MODEM
+                ? typeof(CHARGING_STATE_REQUEST)
+                : typeof(CHARGING_STATE_RESPONSE),
+            _ => typeof(UNKNOWN)
+        };
     }
 }

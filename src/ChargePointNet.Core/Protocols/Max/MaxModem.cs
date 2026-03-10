@@ -1,7 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using ChargePointNet.Core.Net;
 using ChargePointNet.Core.Protocols.Max.Packets;
-using ChargePointNet.Core.Protocols.Max.Packets.Data;
+using ChargePointNet.Packets;
+using ChargePointNet.Packets.Max;
 using Serilog;
 
 namespace ChargePointNet.Core.Protocols.Max;
@@ -45,7 +46,7 @@ public class MaxModem : IModem
         _bus.Stop();
     }
     
-    internal void SendTo(byte address, MaxCommand command, IMaxPacketData data)
+    internal void SendTo(byte address, MaxCommand command, IHexPacket data)
     {
         _bus.Send(new MaxPacket
         {
@@ -56,7 +57,7 @@ public class MaxModem : IModem
         });
     }
 
-    internal void SendBroadcast(MaxCommand command, IMaxPacketData data)
+    internal void SendBroadcast(MaxCommand command, IHexPacket data)
     {
         _bus.Send(new MaxPacket
         {

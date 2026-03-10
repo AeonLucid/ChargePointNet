@@ -1,8 +1,7 @@
-﻿using ChargePointNet.Core.Protocols.Max.Packets;
-using ChargePointNet.Core.Protocols.Max.Packets.Data;
-using ChargePointNet.Core.Protocols.Max.Packets.Serialization;
+﻿using ChargePointNet.Packets;
+using ChargePointNet.Packets.Max;
 
-namespace ChargePointNet.Core.Tests;
+namespace ChargePointNet.Tests;
 
 public class MaxPacketDataTests
 {
@@ -26,7 +25,20 @@ public class MaxPacketDataTests
     }
     
     [Test]
-    public void StateUpdateResponseResponse()
+    public void StateUpdateRequest()
+    {
+        var request = new CB_STATE_UPDATE_REQUEST
+        {
+            
+        };
+        
+        var requestData = SerializeData(request);
+        
+        Assert.That(requestData.Length, Is.EqualTo(132));
+    }
+    
+    [Test]
+    public void StateUpdateResponse()
     {
         var response = new CB_STATE_UPDATE_RESPONSE
         {
@@ -43,11 +55,11 @@ public class MaxPacketDataTests
         });
     }
 
-    private byte[] SerializeData(IMaxPacketData data)
+    private static byte[] SerializeData(IHexPacket data)
     {
         var packetSize = data.Size();
         var packetBuffer = new byte[packetSize];
-        var writer = new SpanWriter(packetBuffer);
+        var writer = new HexSpanWriter(packetBuffer);
         
         data.Serialize(ref writer);
 

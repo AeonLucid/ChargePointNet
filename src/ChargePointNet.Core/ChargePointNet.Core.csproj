@@ -10,11 +10,15 @@
       <PackageReference Include="Serilog" Version="4.3.1" />
       <PackageReference Include="System.IO.Ports" Version="10.0.3" />
     </ItemGroup>
-
+    
     <ItemGroup>
       <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-        <_Parameter1>ChargePointNet.Core.Tests</_Parameter1>
+        <_Parameter1>ChargePointNet.Tests</_Parameter1>
       </AssemblyAttribute>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <ProjectReference Include="..\ChargePointNet.Packets\ChargePointNet.Packets.csproj" />
     </ItemGroup>
     
 </Project>

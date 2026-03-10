@@ -1,5 +1,6 @@
 ﻿using ChargePointNet.Core.Protocols.Max.Packets;
-using ChargePointNet.Core.Protocols.Max.Packets.Data;
+using ChargePointNet.Packets;
+using ChargePointNet.Packets.Max;
 
 namespace ChargePointNet.Core.Protocols.Max;
 
@@ -28,7 +29,7 @@ public class MaxCharger : IChargeBox
         });
     }
 
-    internal void Send(MaxCommand command, IMaxPacketData data)
+    internal void Send(MaxCommand command, IHexPacket data)
     {
         _modem.SendTo(Address, command, data);
     }

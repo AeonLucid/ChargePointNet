@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-using ChargePointNet.Core.Protocols.Max.Packets.Serialization;
+using ChargePointNet.Packets;
 
 namespace ChargePointNet.Core.Protocols.Max.Packets;
 
@@ -26,11 +26,11 @@ internal static class MaxPacketFrame
     
     public static bool TryWritePacketPayload(Memory<byte> buffer, MaxPacket packet)
     {
-        var writer = new SpanWriter(buffer.Span);
+        var writer = new HexSpanWriter(buffer.Span);
         
-        writer.WriteU8Hex(packet.Destination);
-        writer.WriteU8Hex(packet.Source);
-        writer.WriteU8Hex((byte)packet.Command);
+        writer.WriteU8(packet.Destination);
+        writer.WriteU8(packet.Source);
+        writer.WriteU8((byte)packet.Command);
 
         packet.Data?.Serialize(ref writer);
 
@@ -177,7 +177,7 @@ internal static class MaxPacketFrame
         
         payload.CopyTo(buffer);
         
-        var reader = new SpanReader(buffer);
+        var reader = new HexSpanReader(buffer);
 
         if (!reader.TryReadU8(out var destination))
         {
@@ -199,7 +199,7 @@ internal static class MaxPacketFrame
         
         var commandType = (MaxCommand)command;
         var packetDataType = MaxPacketDataMap.GetType(destination, source, commandType);
-        var packetData = (IMaxPacketData)Activator.CreateInstance(packetDataType)!;
+        var packetData = (IHexPacket)Activator.CreateInstance(packetDataType)!;
 
         if (!packetData.Deserialize(ref reader))
         {

@@ -4,7 +4,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChargePointNet", "ChargePoi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChargePointNet.Core", "ChargePointNet.Core\ChargePointNet.Core.csproj", "{DEA40009-0299-4D68-93B6-BB045122EEE7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChargePointNet.Core.Tests", "ChargePointNet.Core.Tests\ChargePointNet.Core.Tests.csproj", "{D77D43DF-A8E8-48AB-92D8-0FD07E3A2DD2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChargePointNet.Tests", "ChargePointNet.Tests\ChargePointNet.Tests.csproj", "{D77D43DF-A8E8-48AB-92D8-0FD07E3A2DD2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChargePointNet.Packets", "ChargePointNet.Packets\ChargePointNet.Packets.csproj", "{EAEBF054-8116-4426-9B19-B0CEF1523381}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChargePointNet.Packets.Shared", "ChargePointNet.Packets.Shared\ChargePointNet.Packets.Shared.csproj", "{AE2A797E-FB65-46B9-B12D-64BD45121DFA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChargePointNet.Packets.Generator", "ChargePointNet.Packets.Generator\ChargePointNet.Packets.Generator.csproj", "{410C959B-4CF4-4B24-BAC8-C6B884207C9C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,5 +30,17 @@ Global
 		{D77D43DF-A8E8-48AB-92D8-0FD07E3A2DD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D77D43DF-A8E8-48AB-92D8-0FD07E3A2DD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D77D43DF-A8E8-48AB-92D8-0FD07E3A2DD2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAEBF054-8116-4426-9B19-B0CEF1523381}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAEBF054-8116-4426-9B19-B0CEF1523381}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAEBF054-8116-4426-9B19-B0CEF1523381}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAEBF054-8116-4426-9B19-B0CEF1523381}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE2A797E-FB65-46B9-B12D-64BD45121DFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE2A797E-FB65-46B9-B12D-64BD45121DFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE2A797E-FB65-46B9-B12D-64BD45121DFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE2A797E-FB65-46B9-B12D-64BD45121DFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{410C959B-4CF4-4B24-BAC8-C6B884207C9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{410C959B-4CF4-4B24-BAC8-C6B884207C9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{410C959B-4CF4-4B24-BAC8-C6B884207C9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{410C959B-4CF4-4B24-BAC8-C6B884207C9C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

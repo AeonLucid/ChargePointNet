@@ -2,7 +2,7 @@
 using ChargePointNet.Core.Protocols.Max;
 using ChargePointNet.Core.Protocols.Max.Packets;
 
-namespace ChargePointNet.Core.Tests;
+namespace ChargePointNet.Tests;
 
 public class MaxPacketFrameTests
 {

@@ -4,15 +4,15 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace ChargePointNet.Core.Protocols.Max.Packets.Serialization;
+namespace ChargePointNet.Packets;
 
 // Read data from a Span<byte>, advancing the position as it goes.
 // Use BinaryPrimitives to read values from the Span.
-internal ref struct SpanReader
+public ref struct HexSpanReader
 {
     private ReadOnlySpan<byte> _data;
     
-    public SpanReader(ReadOnlySpan<byte> data)
+    public HexSpanReader(ReadOnlySpan<byte> data)
     {
         _data = data;
     }

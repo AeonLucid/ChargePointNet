@@ -1,13 +1,13 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace ChargePointNet.Core.Protocols.Max.Packets.Serialization;
+namespace ChargePointNet.Packets;
 
-internal ref struct SpanWriter
+public ref struct HexSpanWriter
 {
     private readonly Span<byte> _data;
 
-    public SpanWriter(Span<byte> data)
+    public HexSpanWriter(Span<byte> data)
     {
         _data = data;
         Position = 0;
@@ -30,10 +30,16 @@ internal ref struct SpanWriter
         Position += count;
     }
     
+    public void Skip(int count)
+    {
+        CheckBounds(count);
+        Advance(count);
+    }
+    
     /// <summary>
     ///     Write byte as hex.
     /// </summary>
-    public void WriteU8Hex(byte value)
+    public void WriteU8(byte value)
     {
         CheckBounds(2);
         _data[Position] = ToHexUpper((byte)(value >> 4));
@@ -44,7 +50,7 @@ internal ref struct SpanWriter
     /// <summary>
     ///     Write ushort as hex.
     /// </summary>
-    public void WriteU16Hex(ushort value)
+    public void WriteU16(ushort value)
     {
         CheckBounds(4);
         _data[Position] = ToHexUpper((byte)((value >> 12) & 0x0F));
@@ -57,7 +63,7 @@ internal ref struct SpanWriter
     /// <summary>
     ///     Write uint as hex.
     /// </summary>
-    public void WriteU32Hex(uint value)
+    public void WriteU32(uint value)
     {
         CheckBounds(8);
         _data[Position] = ToHexUpper((byte)((value >> 28) & 0x0F));
