@@ -67,12 +67,13 @@ public class MaxPacketDataTests
             Unknown_54 = 900,
             MeterUpdateInterval = 900,
             RemoteStart = 0,
+            Unknown_72 = 1000,
             Unknown_10 = "030000"u8.ToArray(),
             Unknown_18 = "01000100000000000000"u8.ToArray(),
             Unknown_40 = "000000003C0000"u8.ToArray(),
             Unknown_58 = "0000"u8.ToArray(),
             Unknown_64 = "01000000"u8.ToArray(),
-            Unknown_76 = "03E8010000"u8.ToArray()
+            Unknown_76 = "010000"u8.ToArray()
         };
         
         var requestData = SerializeData(request);
@@ -81,6 +82,27 @@ public class MaxPacketDataTests
         {
             Assert.That(requestData, Has.Length.EqualTo(86));
             Assert.That(Convert.ToHexString(requestData), Is.EqualTo("4646464646464646363430333030303030303031303030313030303030303030303030303030303030303030303030303343303030303033383430303030303338343031303030303030303030334538303130303030"));
+        });
+    }
+    
+    [Test]
+    public void SetCurrentLimitRequest()
+    {
+        var request = new SET_CURRENT_LIMIT_REQUEST
+        {
+            Unknown = 1,
+            MinimumCurrent = 60,
+            CurrentLimitPhase1 = 60,
+            CurrentLimitPhase2 = 60,
+            CurrentLimitPhase3 = 60
+        };
+        
+        var requestData = SerializeData(request);
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(requestData, Has.Length.EqualTo(18));
+            Assert.That(Convert.ToHexString(requestData), Is.EqualTo("303130303343303033433030334330303343"));
         });
     }
 

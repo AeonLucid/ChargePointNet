@@ -19,10 +19,11 @@ public partial class SET_CB_CONFIGURATION_REQUEST : IHexPacket
     [PacketField(FixedSize = 8, Raw = true)]
     public byte[]? Unknown_64 { get; set; }
     public byte RemoteStart { get; set; }
+    public ushort Unknown_72 { get; set; }
     /// <summary>
     ///     Unknown trailing data, size 94 is the highest for firmware 140.
     ///     This way we support all with a single packet.
     /// </summary>
-    [PacketField(FixedSize = 10, Raw = true)]
+    [PacketField(FixedSize = 6, Raw = true)]
     public byte[]? Unknown_76 { get; set; }
 }

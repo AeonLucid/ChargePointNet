@@ -213,14 +213,14 @@ internal static class MaxPacketFrame
             if (packetDataSize > reader.Remaining)
             {
                 packet = null;
-                error = "Not enough data for packet";
+                error = $"Not enough data for packet data {packetDataType.FullName}";
                 return false;
             }
             
             if (!packetData.Deserialize(ref reader))
             {
                 packet = null;
-                error = "Failed to deserialize packet data";
+                error = $"Failed to deserialize packet data {packetDataType.FullName}";
                 return false;
             }
         }

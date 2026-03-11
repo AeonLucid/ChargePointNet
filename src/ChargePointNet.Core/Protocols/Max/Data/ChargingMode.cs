@@ -4,7 +4,7 @@
 ///     Proper order
 ///     A0 (available) → A7 (ready) → 81 (charging) → C1 (finished) → 80 (unplugged) → A0 (available)
 /// </summary>
-public enum ChargingState : byte
+public enum ChargingMode : byte
 {
     Unknown_07 = 0x07,
     Unknown_20 = 0x20,

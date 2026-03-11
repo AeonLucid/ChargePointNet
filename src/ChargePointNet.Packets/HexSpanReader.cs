@@ -86,7 +86,7 @@ public ref struct HexSpanReader
             return false;
         }
         
-        value = BinaryPrimitives.ReadUInt32LittleEndian(output);
+        value = BinaryPrimitives.ReadUInt32BigEndian(output);
         return true;
     }
 
