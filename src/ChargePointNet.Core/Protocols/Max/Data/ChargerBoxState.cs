@@ -3,7 +3,7 @@
 /// <summary>
 ///     02 (available) → 47 (charging cable connected) → 4A (ready) → 48 (charging) → 4A (ready) → 4B (finished) → 02 (available)
 /// </summary>
-internal enum ChargerBoxState : byte
+public enum ChargerBoxState : byte
 {
     Available = 0x02,
     Error = 0x0A,

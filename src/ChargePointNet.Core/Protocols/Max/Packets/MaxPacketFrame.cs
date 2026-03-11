@@ -170,7 +170,7 @@ internal static class MaxPacketFrame
         return true;
     }
 
-    public static bool TryReadPacketPayload(ReadOnlySequence<byte> payload, [NotNullWhen(true)] out MaxPacket? packet)
+    public static bool TryReadPacketPayload(ReadOnlySequence<byte> payload, [NotNullWhen(true)] out MaxPacket? packet, out string? error)
     {
         var bufferLen = (int)payload.Length;
         var buffer = bufferLen > 256 ? new byte[bufferLen] : stackalloc byte[bufferLen];
@@ -182,21 +182,23 @@ internal static class MaxPacketFrame
         if (!reader.TryReadU8(out var destination))
         {
             packet = null;
+            error = "Failed to read destination";
             return false;
         }
 
         if (!reader.TryReadU8(out var source))
         {
             packet = null;
+            error = "Failed to read source";
             return false;
         }
 
         if (!reader.TryReadU8(out var command))
         {
             packet = null;
+            error = "Failed to read command";
             return false;
         }
-        
         
         var commandType = (MaxCommand)command;
         
@@ -207,9 +209,18 @@ internal static class MaxPacketFrame
         {
             packetData = (IHexPacket)Activator.CreateInstance(packetDataType)!;
 
+            var packetDataSize = packetData.Size();
+            if (packetDataSize > reader.Remaining)
+            {
+                packet = null;
+                error = "Not enough data for packet";
+                return false;
+            }
+            
             if (!packetData.Deserialize(ref reader))
             {
                 packet = null;
+                error = "Failed to deserialize packet data";
                 return false;
             }
         }
@@ -222,6 +233,7 @@ internal static class MaxPacketFrame
             Data = packetData
         };
 
+        error = null;
         return true;
     }
 

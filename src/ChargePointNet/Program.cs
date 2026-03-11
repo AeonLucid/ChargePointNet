@@ -22,6 +22,7 @@ try
         .WriteTo.Console());
 
     builder.Services.Configure<DevicesConfig>(builder.Configuration.GetSection(DevicesConfig.Section));
+    builder.Services.AddHostedService<InitializationService>();
     builder.Services.AddHostedService<DeviceRegistrationService>();
     builder.Services.AddSingleton<EVManager>();
     

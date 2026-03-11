@@ -10,7 +10,7 @@ namespace ChargePointNet.Core.Protocols.Max;
 /// <summary>
 ///     Implements a max modem. See https://www.geekabit.nl/projects/managed-ev-charger-to-stand-alone/protocol/
 /// </summary>
-public class MaxModem : IModem
+public class MaxModem : IModem, ITickable
 {
     private static readonly ILogger Logger = Log.ForContext<MaxModem>();
     
@@ -33,17 +33,30 @@ public class MaxModem : IModem
     public void Start()
     {
         _bus.Start();
-        _bus.Send(new MaxPacket
-        {
-            Destination = MaxAddress.BROADCAST,
-            Source = MaxAddress.MODEM,
-            Command = MaxCommand.RESTART_REGISTRATION
-        });
     }
 
     public void Stop()
     {
         _bus.Stop();
+    }
+
+    void ITickable.Tick()
+    {
+        if (!Connected)
+        {
+            return;
+        }
+
+        if (_chargers.IsEmpty)
+        {
+            SendBroadcast(MaxCommand.RESTART_REGISTRATION);
+            return;
+        }
+        
+        foreach (ITickable charger in _chargers.Values)
+        {
+            charger.Tick();
+        }
     }
     
     internal void SendTo(byte address, MaxCommand command, IHexPacket? data = null)

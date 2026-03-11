@@ -17,5 +17,5 @@ public partial class GET_METER_INFO_RESPONSE : IHexPacket
     public string? SerialNumber { get; set; }
     public ushort MainsFrequency { get; set; }
     [PacketField(FixedSize = 4, Raw = true)]
-    public byte[]? Unknown { get; set; }
+    private byte[]? Unknown_60 { get; set; }
 }

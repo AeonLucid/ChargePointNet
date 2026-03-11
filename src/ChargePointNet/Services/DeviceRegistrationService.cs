@@ -70,9 +70,6 @@ public class DeviceRegistrationService : BackgroundService
 
         do
         {
-            // Clean up.
-            _evManager.Cleanup();
-            
             // Register new devices.
             var config = _devicesConfig.CurrentValue;
 

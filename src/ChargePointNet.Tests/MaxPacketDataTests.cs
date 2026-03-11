@@ -19,8 +19,8 @@ public class MaxPacketDataTests
         
         Assert.Multiple(() =>
         {
-            Assert.That(responseData.Length, Is.EqualTo(11));
-            Assert.That(Convert.ToHexStringLower(responseData), Is.EqualTo("3132333435363730313033"));
+            Assert.That(responseData, Has.Length.EqualTo(11));
+            Assert.That(Convert.ToHexString(responseData), Is.EqualTo("3132333435363730313033"));
         });
     }
     
@@ -34,7 +34,7 @@ public class MaxPacketDataTests
         
         var requestData = SerializeData(request);
         
-        Assert.That(requestData.Length, Is.EqualTo(132));
+        Assert.That(requestData, Has.Length.EqualTo(132));
     }
     
     [Test]
@@ -50,8 +50,37 @@ public class MaxPacketDataTests
         
         Assert.Multiple(() =>
         {
-            Assert.That(responseData.Length, Is.EqualTo(16));
-            Assert.That(Convert.ToHexStringLower(responseData), Is.EqualTo("30303031453234303030304330413833"));
+            Assert.That(responseData, Has.Length.EqualTo(16));
+            Assert.That(Convert.ToHexString(responseData), Is.EqualTo("30303031453234303030304330413833"));
+        });
+    }
+    
+    [Test]
+    public void SetCbConfiguration()
+    {
+        var request = new SET_CB_CONFIGURATION_REQUEST
+        {
+            Mask = 0xFFFFFFFF,
+            LedBrightness = 100,
+            MeterType = 0,
+            AutoStart = 0,
+            Unknown_54 = 900,
+            MeterUpdateInterval = 900,
+            RemoteStart = 0,
+            Unknown_10 = "030000"u8.ToArray(),
+            Unknown_18 = "01000100000000000000"u8.ToArray(),
+            Unknown_40 = "000000003C0000"u8.ToArray(),
+            Unknown_58 = "0000"u8.ToArray(),
+            Unknown_64 = "01000000"u8.ToArray(),
+            Unknown_76 = "03E8010000"u8.ToArray()
+        };
+        
+        var requestData = SerializeData(request);
+        
+        Assert.Multiple(() =>
+        {
+            Assert.That(requestData, Has.Length.EqualTo(86));
+            Assert.That(Convert.ToHexString(requestData), Is.EqualTo("4646464646464646363430333030303030303031303030313030303030303030303030303030303030303030303030303343303030303033383430303030303338343031303030303030303030334538303130303030"));
         });
     }
 
