@@ -23,7 +23,12 @@ public class EVManager : IDisposable
         _boxes = [];
         _tickers = [];
     }
-
+    
+    public IEnumerable<IChargeBox> ChargeBoxes => _modems
+        .Where(x => x.Value.Connected)
+        .SelectMany(x => x.Value.Chargers)
+        .Concat(_boxes.Values);
+    
     public void Start()
     {
         if (_tickTask != null)
@@ -96,6 +101,11 @@ public class EVManager : IDisposable
         {
             _tickers.Add(tickable);
         }
+    }
+
+    public IChargeBox? FindBySerial(string serial)
+    {
+        return ChargeBoxes.FirstOrDefault(x => x.Serial == serial);
     }
 
     private void Cleanup()

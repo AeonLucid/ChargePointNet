@@ -27,6 +27,8 @@ public class MaxModem : IModem, ITickable
         _bus.OnPacketReceived += OnPacketReceived;
         _chargers = [];
     }
+    
+    public IEnumerable<IChargeBox> Chargers => _chargers.Values;
 
     public bool Connected => _bus.Connected;
 

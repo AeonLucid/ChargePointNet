@@ -1,6 +1,8 @@
 using ChargePointNet.Config;
 using ChargePointNet.Core;
 using ChargePointNet.Services;
+using ChargePointNet.Services.OpenApi;
+using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
 
@@ -25,11 +27,28 @@ try
     builder.Services.AddHostedService<InitializationService>();
     builder.Services.AddHostedService<DeviceRegistrationService>();
     builder.Services.AddSingleton<EVManager>();
+    builder.Services.AddControllers();
+    builder.Services.AddOpenApi(options =>
+    {
+        options.AddDocumentTransformer<OpenApiDocumentTransformer>();
+        // options.AddOperationTransformer<OpenApiOperationResponseTransformer>();
+    });
     
     var app = builder.Build();
 
     app.UseSerilogRequestLogging();
-    app.MapGet("/", () => "Hello World!");
+    
+    app.MapOpenApi();
+    app.MapScalarApiReference(options =>
+    {
+        options.Title = "ChargePointNet API Docs";
+        options.ExpandAllResponses();
+        options.HideModels();
+        options.DisableTelemetry();
+        options.DisableAgent();
+    });
+    
+    app.MapControllers();
     app.Run();
 } 
 catch (Exception ex)

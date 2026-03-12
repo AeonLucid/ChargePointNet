@@ -1,4 +1,5 @@
-﻿using ChargePointNet.Core.Protocols.Max.Data;
+﻿using ChargePointNet.Core.Data;
+using ChargePointNet.Core.Protocols.Max.Data;
 using ChargePointNet.Core.Protocols.Max.Packets;
 using ChargePointNet.Packets;
 using ChargePointNet.Packets.Max;
@@ -12,31 +13,61 @@ public class MaxCharger : IChargeBox, ITickable
     
     private static readonly CurrentLimit LimitLow = new(60, 60, 60, 60);
     private static readonly CurrentLimit LimitHigh = new(60, 160, 160, 160);
+
+    private const string EmptySerial = "0000000000000000";
     
     private readonly MaxModem _modem;
 
+    // TODO: What can we map meter type to? Firmware? Hardware version?
     private bool _isConfigurationAcknowledged;
+    private bool _isLocked;
     
     private CurrentLimit? _currentLimit;
     private CurrentLimit? _currentLimitAck;
     private CurrentLimit? _currentLimitSent;
+
+    private ChargerBoxState? _chargerBoxState;
+    private ChargingMode? _mode;
+    private MaxMeterInfo? _meterInfo;
+    private ChargerConfiguration? _chargerConfiguration;
+    private LedColour _ledColour = LedColour.Off;
     
     internal MaxCharger(MaxModem modem)
     {
         _modem = modem;
     }
 
+    public bool Initialized { get; private set; }
+
     public required byte Address { get; init; }
     public required string Serial { get; init; }
     public required string HardwareVersion { get; init; }
     public required string FirmwareVersion { get; init;}
     public string HardwareGeneration => HardwareVersion[^2..];
+    public double ChassisTemperature { get; private set; }
+    public double SocketTemperature { get; private set; }
 
-    public ChargerBoxState? ChargeBoxState { get; private set; }
-    public ChargingMode? Mode { get; private set; }
-    public MeterInfo? MeterInfo { get; private set; }
-    public ChargerConfiguration? ChargerConfiguration { get; private set; }
-    
+    public ChargerBoxStatus Status => _chargerBoxState switch
+    {
+        ChargerBoxState.Available => ChargerBoxStatus.Available,
+        ChargerBoxState.Error => ChargerBoxStatus.Error,
+        ChargerBoxState.ChargingCableConnected => ChargerBoxStatus.Available,
+        ChargerBoxState.Charging => ChargerBoxStatus.Charging,
+        ChargerBoxState.Ready => ChargerBoxStatus.Ready,
+        ChargerBoxState.Finished => ChargerBoxStatus.Available, // TODO: When triggered?
+        null => ChargerBoxStatus.Unknown,
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+    public ChargerMeter? Meter => _meterInfo != null
+        ? new ChargerMeter(
+            _chargerConfiguration!.MeterType == 0 ? ChargerMeterType.Serial : ChargerMeterType.Pulse,
+            _meterInfo.Version,
+            _meterInfo.Model,
+            _meterInfo.Serial,
+            _meterInfo.MainsFrequency)
+        : null;
+
     public void Initialize()
     {
         Send(MaxCommand.CONNECTION_STATE_CHANGED, new CONNECTION_STATE_CHANGED_REQUEST
@@ -45,6 +76,20 @@ public class MaxCharger : IChargeBox, ITickable
             HeartbeatInterval = 900,
             LedEnable = 1
         });
+    }
+
+    public void UpdateLedBrightness(byte brightness)
+    {
+        if (brightness > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(brightness), "Brightness must be between 0 and 100.");
+        }
+
+        if (_chargerConfiguration != null)
+        {
+            _chargerConfiguration.LedBrightness = brightness;
+            _isConfigurationAcknowledged = false;
+        }
     }
 
     void ITickable.Tick()
@@ -69,20 +114,20 @@ public class MaxCharger : IChargeBox, ITickable
     private bool ConfigureCharger()
     {
         // Check if initialized.
-        if (Mode == null)
+        if (_mode == null)
         {
             return false;
         }
         
         // Fetch meter info.
-        if (MeterInfo == null)
+        if (_meterInfo == null)
         {
             Send(MaxCommand.GET_METER_INFO);
             return false;
         }
         
         // Fetch charger configuration.
-        if (ChargerConfiguration == null)
+        if (_chargerConfiguration == null)
         {
             Send(MaxCommand.GET_CB_CONFIGURATION);
             return false;
@@ -94,8 +139,8 @@ public class MaxCharger : IChargeBox, ITickable
             Send(MaxCommand.SET_CB_CONFIGURATION, new SET_CB_CONFIGURATION_REQUEST
             {
                 Mask = 0xFFFFFFFF,
-                LedBrightness = 100,
-                MeterType = 0,
+                LedBrightness = _chargerConfiguration.LedBrightness,
+                MeterType = (byte)_chargerConfiguration!.MeterType,
                 AutoStart = 0,
                 Unknown_54 = 900,
                 MeterUpdateInterval = 900,
@@ -111,13 +156,14 @@ public class MaxCharger : IChargeBox, ITickable
             return false;
         }
 
+        Initialized = true;
         return true;
     }
 
     private void ConfigureCurrentLimit()
     {
         // Update current limit.
-        _currentLimit = Mode switch
+        _currentLimit = _mode switch
         {
             ChargingMode.Ready => LimitLow,
             ChargingMode.Charging => LimitHigh,
@@ -132,9 +178,9 @@ public class MaxCharger : IChargeBox, ITickable
         }
 
         // Check if the chargebox is in the correct state.
-        if (ChargeBoxState != ChargerBoxState.ChargingCableConnected &&
-            ChargeBoxState != ChargerBoxState.Charging &&
-            ChargeBoxState != ChargerBoxState.Ready)
+        if (_chargerBoxState != ChargerBoxState.ChargingCableConnected &&
+            _chargerBoxState != ChargerBoxState.Charging &&
+            _chargerBoxState != ChargerBoxState.Ready)
         {
             return;
         }
@@ -168,16 +214,16 @@ public class MaxCharger : IChargeBox, ITickable
                     Ack = MaxAcknowledgment.ACK
                 });
                 
-                Mode = (ChargingMode)request.State;
+                _mode = (ChargingMode)request.State;
 
                 // Clear the current limit to force reconfiguration.
                 // TODO: Unable to get "Charging" mode, only from CB_STATE_UPDATE.
-                if (Mode == ChargingMode.Ready || Mode == ChargingMode.Charging)
+                if (_mode == ChargingMode.Ready || _mode == ChargingMode.Charging)
                 {
                     _currentLimitAck = null;
                 }
                 
-                Logger.Debug("Charging state updated: {State}", Mode);
+                // Logger.Debug("Charging state updated: {State}", Mode);
                 break;
             }
             case CB_STATE_UPDATE_REQUEST request:
@@ -188,28 +234,48 @@ public class MaxCharger : IChargeBox, ITickable
                     Timestamp = MaxUtils.Timestamp()
                 });
                 
-                ChargeBoxState = (ChargerBoxState)request.State;
+                _chargerBoxState = (ChargerBoxState)request.State;
+                _ledColour = (LedColour)request.LedColour;
+                _isLocked = request.IsLocked == 1;
+                ChassisTemperature = request.ChassisTemperature / 10d;
+                SocketTemperature = request.SocketTemperature / 10d;
                 
-                Logger.Debug("Charger box state updated: {State}", ChargeBoxState);
+                // Status = ChargeBoxState switch
+                // {
+                //     ChargerBoxState.Charging => ChargeBoxStatus.Charging,
+                //     ChargerBoxState.Idle => ChargeBoxStatus.Idle,
+                //     ChargerBoxState.Error => ChargeBoxStatus.Error,
+                //     _ => ChargeBoxStatus.Unknown
+                // };
+                
+                Logger.Debug("Charger state: {State}, mode: {Mode}, color: {Colour}", _chargerBoxState, _mode, _ledColour);
                 break;
             }
             case GET_METER_INFO_RESPONSE response:
             {
-                MeterInfo = new MeterInfo
+                _meterInfo = new MaxMeterInfo
                 {
-                    Version = response.VersionNumber![..response.VersionNumberLength],
-                    Model = response.ModelName![..response.ModelNameLength],
-                    Serial = response.SerialNumber!,
-                    MainsFrequency = response.MainsFrequency / 100d,
+                    Version = response.VersionNumberLength != 0
+                        ? response.VersionNumber![..response.VersionNumberLength]
+                        : null,
+                    Model = response.ModelNameLength != 0
+                        ? response.ModelName![..response.ModelNameLength]
+                        : null,
+                    Serial = response.SerialNumber != EmptySerial
+                        ? response.SerialNumber
+                        : null,
+                    MainsFrequency = response.MainsFrequency != 0
+                        ? response.MainsFrequency / 100d
+                        : null,
                 };
                 break;
             }
             case GET_CB_CONFIGURATION_RESPONSE response:
             {
-                ChargerConfiguration = new ChargerConfiguration
+                _chargerConfiguration = new ChargerConfiguration
                 {
                     MeterUpdateInterval = response.MeterUpdateInterval,
-                    MeterType = (MeterType)response.MeterType,
+                    MeterType = (MaxMeterType)response.MeterType,
                     LedBrightness = response.LedBrightness,
                     AutoStart = response.AutoStart,
                     RemoteStart = response.RemoteStart,

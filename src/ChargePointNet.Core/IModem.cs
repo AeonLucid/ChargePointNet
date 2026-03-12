@@ -5,6 +5,8 @@
 /// </summary>
 internal interface IModem : IDisposable
 {
+    IEnumerable<IChargeBox> Chargers { get; }
+    
     bool Connected { get; }
     
     void Start();
