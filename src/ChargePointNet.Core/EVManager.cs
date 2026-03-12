@@ -1,4 +1,5 @@
-﻿using ChargePointNet.Core.Net;
+﻿using ChargePointNet.Core.Interfaces;
+using ChargePointNet.Core.Net;
 using ChargePointNet.Core.Protocols;
 using ChargePointNet.Core.Protocols.Max;
 using Serilog;
@@ -9,6 +10,8 @@ public class EVManager : IDisposable
 {
     private static readonly ILogger Logger = Log.ForContext<EVManager>();
     
+    private readonly IAuthService _authService;
+    
     private readonly Dictionary<string, IModem> _modems;
     private readonly Dictionary<string, IChargeBox> _boxes;
     private readonly List<ITickable> _tickers;
@@ -17,8 +20,9 @@ public class EVManager : IDisposable
     private bool _stopped;
     private bool _disposed;
     
-    public EVManager()
+    public EVManager(IAuthService authService)
     {
+        _authService = authService;
         _modems = [];
         _boxes = [];
         _tickers = [];
@@ -88,7 +92,7 @@ public class EVManager : IDisposable
         switch (device.Protocol)
         {
             case EVProtocol.Max:
-                _modems[device.Identifier] = new MaxModem(device);
+                _modems[device.Identifier] = new MaxModem(device, _authService);
                 _modems[device.Identifier].Start();
 
                 newEntry = _modems[device.Identifier];

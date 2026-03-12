@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using ChargePointNet.Core.Interfaces;
 using ChargePointNet.Core.Net;
 using ChargePointNet.Core.Protocols.Max.Packets;
 using ChargePointNet.Packets;
@@ -15,14 +16,16 @@ public class MaxModem : IModem, ITickable
     private static readonly ILogger Logger = Log.ForContext<MaxModem>();
     
     private readonly IDevice _device;
+    private readonly IAuthService _authService;
     private readonly MaxModemBus _bus;
     private readonly ConcurrentDictionary<byte, MaxCharger> _chargers;
 
     private bool _disposed;
 
-    public MaxModem(IDevice device)
+    public MaxModem(IDevice device, IAuthService authService)
     {
         _device = device;
+        _authService = authService;
         _bus = new MaxModemBus(device);
         _bus.OnPacketReceived += OnPacketReceived;
         _chargers = [];
@@ -110,7 +113,7 @@ public class MaxModem : IModem, ITickable
             return null;
         }
 
-        var charger = new MaxCharger(this)
+        var charger = new MaxCharger(this, _authService)
         {
             Address = address.Value,
             Serial = serial,

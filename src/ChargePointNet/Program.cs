@@ -1,6 +1,8 @@
 using ChargePointNet.Config;
 using ChargePointNet.Core;
+using ChargePointNet.Core.Interfaces;
 using ChargePointNet.Services;
+using ChargePointNet.Services.Auth;
 using ChargePointNet.Services.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
@@ -27,6 +29,8 @@ try
     builder.Services.AddHostedService<InitializationService>();
     builder.Services.AddHostedService<DeviceRegistrationService>();
     builder.Services.AddSingleton<EVManager>();
+    builder.Services.AddSingleton<InMemoryAuthService>();
+    builder.Services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<InMemoryAuthService>());
     builder.Services.AddControllers();
     builder.Services.AddOpenApi(options =>
     {
@@ -39,10 +43,13 @@ try
     app.UseSerilogRequestLogging();
     
     app.MapOpenApi();
-    app.MapScalarApiReference(options =>
+    app.MapScalarApiReference("/docs", options =>
     {
         options.Title = "ChargePointNet API Docs";
         options.ExpandAllResponses();
+        options.ExpandAllTags();
+        options.ExpandAllModelSections();
+        options.PreserveSchemaPropertyOrder();
         options.HideModels();
         options.DisableTelemetry();
         options.DisableAgent();

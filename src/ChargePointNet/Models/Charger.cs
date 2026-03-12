@@ -3,9 +3,6 @@ using ChargePointNet.Core.Data;
 
 namespace ChargePointNet.Models;
 
-/// <summary>
-///     Test3
-/// </summary>
 public class Charger
 {
     public required string Serial { get; init; }

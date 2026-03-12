@@ -1,4 +1,5 @@
 ﻿using ChargePointNet.Core.Data;
+using ChargePointNet.Core.Interfaces;
 using ChargePointNet.Core.Protocols.Max.Data;
 using ChargePointNet.Core.Protocols.Max.Packets;
 using ChargePointNet.Packets;
@@ -11,12 +12,18 @@ public class MaxCharger : IChargeBox, ITickable
 {
     private static readonly ILogger Logger = Log.ForContext<MaxCharger>();
     
+    /// <summary>
+    ///     EVBox keeps polling for a minute.
+    /// </summary>
+    private static readonly TimeSpan AuthTimeout = TimeSpan.FromSeconds(60);
+    
     private static readonly CurrentLimit LimitLow = new(60, 60, 60, 60);
     private static readonly CurrentLimit LimitHigh = new(60, 160, 160, 160);
 
     private const string EmptySerial = "0000000000000000";
     
     private readonly MaxModem _modem;
+    private readonly IAuthService _authService;
 
     // TODO: What can we map meter type to? Firmware? Hardware version?
     private bool _isConfigurationAcknowledged;
@@ -32,9 +39,10 @@ public class MaxCharger : IChargeBox, ITickable
     private ChargerConfiguration? _chargerConfiguration;
     private LedColour _ledColour = LedColour.Off;
     
-    internal MaxCharger(MaxModem modem)
+    internal MaxCharger(MaxModem modem, IAuthService authService)
     {
         _modem = modem;
+        _authService = authService;
     }
 
     public bool Initialized { get; private set; }
@@ -73,7 +81,7 @@ public class MaxCharger : IChargeBox, ITickable
         Send(MaxCommand.CONNECTION_STATE_CHANGED, new CONNECTION_STATE_CHANGED_REQUEST
         {
             // TODO: Does nothing? Actual interval is 16 minutes (960 secs).
-            HeartbeatInterval = 900,
+            HeartbeatInterval = 120,
             LedEnable = 1
         });
     }
@@ -289,9 +297,18 @@ public class MaxCharger : IChargeBox, ITickable
             }
             case AUTHORIZE_CARD_REQUEST request:
             {
+                var key = new AuthRequestKey(Serial, request.CardNumberValue![..request.CardNumberLength]);
+                var pending = _authService.GetOrCreate(key, AuthTimeout);
+                if (pending.IsPending)
+                {
+                    return;
+                }
+                
+                _authService.Remove(key);
+                
                 Send(MaxCommand.AUTHORIZE_CARD, new AUTHORIZE_CARD_RESPONSE
                 {
-                    State = 0x01,
+                    State = (byte)(pending.IsAuthorized ? 0x01 : 0x12),
                     CardNumberLength = request.CardNumberLength,
                     CardNumberValue = request.CardNumberValue,
                     Unknown = 0xFFFF

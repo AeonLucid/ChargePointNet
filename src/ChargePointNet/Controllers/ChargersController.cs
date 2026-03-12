@@ -83,7 +83,8 @@ public class ChargersController : ControllerBase
     ///     Update led brightness
     /// </summary>
     /// <param name="serial">The serial of a charger.</param>
-    /// <param name="request">Test123</param>
+    /// <param name="request"></param>
+    /// <returns></returns>
     [HttpPost("{serial}/led-brightness")]
     [Consumes("application/json")]
     [Produces("application/json")]
