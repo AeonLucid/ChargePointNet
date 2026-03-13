@@ -1,0 +1,24 @@
+name: dotnet package
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore dependencies
+        run: dotnet restore src/ChargePointNet.sln
+      - name: Run tests
+        run: dotnet test src/ChargePointNet.sln
+      - name: Publish Windows
+        run: dotnet publish src/ChargePointNet/ChargePointNet.csproj -c Release -o ./publish-win-x64 -r win-x64
+      - name: Artifact Windows
+        uses: actions/upload-artifact@v7
+        with:
+          name: Windows
+          path: ./publish-win-x64
