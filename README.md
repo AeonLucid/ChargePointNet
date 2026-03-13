@@ -14,9 +14,9 @@ When the API is running, you can access the following urls.
 
 | Item | Url |
 |-|-|
-| API | http://localhost:8080/api |
-| API Docs | http://localhost:8080/docs |
-| Demo | http://localhost:8080/demo |
+| API | http://localhost:5000/api |
+| API Docs | http://localhost:5000/docs |
+| Demo | http://localhost:5000/demo |
 
 ## Development
 
