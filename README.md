@@ -6,7 +6,7 @@ This project is currently focused on EVBox chargers but has been created with su
 
 ## Installation
 
-1. Download the [latest release](https://github.com/AeonLucid/ChargePointNet).
+1. Download the [latest release](https://github.com/AeonLucid/ChargePointNet) or [latest nightly](https://nightly.link/AeonLucid/ChargePointNet/workflows/build/main?preview).
 2. Configure `appsettings.json`.
 3. Run `ChargePointNet.exe`.
 
