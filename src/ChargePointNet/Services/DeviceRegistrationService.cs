@@ -51,6 +51,10 @@ public class DeviceRegistrationService : BackgroundService
         {
             _logger.LogError("Failed to connect with {Device}", device);
         }
+        catch (UnauthorizedAccessException)
+        {
+            _logger.LogError("No serial detected for {Device}", device);
+        }
         catch (FileNotFoundException)
         {
             _logger.LogError("No serial detected for {Device}", device);
