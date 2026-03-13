@@ -1,3 +1,4 @@
+using ChargePointNet.Components;
 using ChargePointNet.Config;
 using ChargePointNet.Core;
 using ChargePointNet.Core.Interfaces;
@@ -58,6 +59,12 @@ try
         // options.AddOperationTransformer<OpenApiOperationResponseTransformer>();
     });
     
+    var demo = builder.Configuration.GetSection(DemoConfig.Section).Get<DemoConfig>();
+    if (demo != null && demo.Enabled)
+    {
+        builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+    }
+    
     var app = builder.Build();
 
     app.UseSerilogRequestLogging();
@@ -76,6 +83,14 @@ try
     });
     
     app.MapControllers();
+
+    if (demo != null && demo.Enabled)
+    {
+        app.UseAntiforgery();
+        app.MapStaticAssets();
+        app.MapRazorComponents<DemoApp>().AddInteractiveServerRenderMode();
+    }
+    
     app.Run();
 } 
 catch (Exception ex)

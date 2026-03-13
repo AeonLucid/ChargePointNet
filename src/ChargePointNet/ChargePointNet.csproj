@@ -4,6 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -12,6 +13,7 @@
     </PropertyGroup>
     
     <ItemGroup>
+      <PackageReference Include="Humanizer.Core" Version="3.0.10" />
       <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
       <PackageReference Include="Scalar.AspNetCore" Version="2.13.6" />
       <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
@@ -20,6 +22,11 @@
 
     <ItemGroup>
       <ProjectReference Include="..\ChargePointNet.Core\ChargePointNet.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="Components\Layout\MainLayout.razor" />
+      <AdditionalFiles Include="Components\Layout\ReconnectModal.razor" />
     </ItemGroup>
 
 </Project>

@@ -1,0 +1,269 @@
+﻿@page "/demo"
+@implements IDisposable
+@using ChargePointNet.Config
+@using ChargePointNet.Core
+@using ChargePointNet.Core.Data
+@using ChargePointNet.Core.Interfaces
+@using ChargePointNet.Services.Auth
+@using ChargePointNet.Services.Sessions
+@using Humanizer
+@using Microsoft.Extensions.Options
+@inject ILogger<DemoPage> logger
+@inject IOptions<AuthConfig> authConfig
+@inject EVManager evManager
+@inject IAuthService authService
+@inject ISessionService sessionService
+
+<PageTitle>ChargePointNet Demo</PageTitle>
+
+<div class="container-fluid">
+    <h1 class="text-center">Demo</h1>
+    
+    <p class="text-center">This page shows the data available within the API.</p>
+
+    <div class="bg-dark p-3 mb-3">
+        <h3>Chargers</h3>
+        
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Status</th>
+                <th>Serial</th>
+                <th>Firmware</th>
+                <th>Hardware</th>
+                <th>Temperature</th>
+                <th>Charging</th>
+                <th>Locked</th>
+                <th>AutoStart</th>
+                <th>Last update</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var box in _boxes)
+            {
+                <tr>
+                    <td class="align-middle">
+                        @switch (box.LedColor)
+                        {
+                            case LedColor.Unknown:
+                                <i class="bi bi-question-lg"></i>
+                                break;
+                            case LedColor.Green:
+                                <i class="bi bi-circle-fill" style="color: #00FF00"></i>
+                                break;
+                            case LedColor.Red:
+                                <i class="bi bi-circle-fill" style="color: #FF0000"></i>
+                                break;
+                            case LedColor.Yellow:
+                                <i class="bi bi-circle-fill" style="color: #FFFF00"></i>
+                                break;
+                            case LedColor.Blue:
+                                <i class="bi bi-circle-fill" style="color: #0000FF"></i>
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    </td>
+                    <td class="align-middle">@box.Serial</td>
+                    <td class="align-middle">@box.FirmwareVersion</td>
+                    <td class="align-middle">@box.HardwareVersion</td>
+                    <td class="align-middle">@box.ChassisTemperature.ToString("N2") &deg;C</td>
+                    <td class="align-middle">
+                        @if (box.IsCharging)
+                        {
+                            <i class="bi bi-check-lg text-success"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-lg text-danger"></i>
+                        }
+                    </td>
+                    <td class="align-middle">
+                        @if (box.IsLocked)
+                        {
+                            <i class="bi bi-check-lg text-success"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-lg text-danger"></i>
+                        }
+                    </td>
+                    <td class="align-middle">
+                        <button class="btn btn-sm @(box.AutoStart ? "btn-success" : "btn-outline-danger")"
+                                @onclick="() => box.UpdateAutostart(!box.AutoStart)">
+
+                            <i class="bi @(box.AutoStart ? "bi-check-lg-circle-fill" : "bi-x-circle") me-1"></i>
+                            @(box.AutoStart ? "Enabled" : "Disabled")
+                        </button>
+                    </td>
+                    <td class="align-middle">@box.UpdatedAt.Humanize()</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="bg-dark p-3 mb-3">
+        <h3>Pending authorizations</h3>
+        
+        @if (authConfig.Value.Automatic)
+        {
+            <div class="alert alert-warning mt-3 mb-0">
+                Automatic authorization is enabled, so there can be no pending authorizations.
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Serial</th>
+                    <th>Card number</th>
+                    <th>Authorized</th>
+                    <th>Pending</th>
+                    <th>Created</th>
+                    <th>Expires</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var pending in _pendingAuth)
+                {
+                    <tr>
+                        <td class="align-middle">@pending.Id</td>
+                        <td class="align-middle">@pending.Key.Serial</td>
+                        <td class="align-middle">@pending.Key.CardNumber</td>
+                        <td class="align-middle">
+                            @if (pending.IsAuthorized)
+                            {
+                                <i class="bi bi-check-lg text-success"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-x-lg text-danger"></i>
+                            }
+                        </td>
+                        <td class="align-middle">
+                            @if (pending.IsPending)
+                            {
+                                <i class="bi bi-check-lg text-success"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-x-lg text-danger"></i>
+                            }
+                        </td>
+                        <td class="align-middle">@pending.CreatedAt.Humanize()</td>
+                        <td class="align-middle">@pending.ExpiresAt.Humanize()</td>
+                        <td class="align-middle">
+                            <div class="btn-group" role="group" aria-label="Basic example">
+                                <button class="btn btn-success btn-sm" @onclick="() => authService.Authorize(pending.Id, true)">Authorize</button>
+                                <button class="btn btn-danger btn-sm" @onclick="() => authService.Authorize(pending.Id, false)">Reject</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <div class="bg-dark p-3 mb-3">
+        <h3>Sessions</h3>
+        
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Id</th>
+                <th>Serial</th>
+                <th>Card number</th>
+                <th>Finished</th>
+                <th>Charging</th>
+                <th>Meter Start</th>
+                <th>Meter Current</th>
+                <th>Meter End</th>
+                <th>Created</th>
+                <th>Updated</th>
+                <th>Ended</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var session in _sessions.OrderByDescending(x => x.CreatedAt))
+            {
+                <tr>
+                    <td class="align-middle">@session.Id</td>
+                    <td class="align-middle">@session.Key.Serial</td>
+                    <td class="align-middle">@session.Key.CardNumber</td>
+                    <td class="align-middle">
+                        @if (session.EndedAt != null)
+                        {
+                            <i class="bi bi-check-lg text-success"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-lg text-danger"></i>
+                        }
+                    </td>
+                    <td class="align-middle">
+                        @if (session.IsCharging)
+                        {
+                            <i class="bi bi-check-lg text-success"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-lg text-danger"></i>
+                        }
+                    </td>
+                    <td class="align-middle">@session.MeterValueStart</td>
+                    <td class="align-middle">@session.MeterValueCurrent</td>
+                    <td class="align-middle">@session.MeterValueEnd</td>
+                    <td class="align-middle">@session.CreatedAt.Humanize()</td>
+                    <td class="align-middle">@session.UpdatedAt.Humanize()</td>
+                    <td class="align-middle">@session.EndedAt.Humanize()</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private Timer? _timer;
+    private List<IChargeBox> _boxes = [];
+    private List<ChargeSession> _sessions = [];
+    private List<AuthRequest> _pendingAuth = [];
+
+    protected override void OnInitialized()
+    {
+        _timer = new Timer(OnTimerElapsed, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
+    }
+
+    private async void OnTimerElapsed(object? state)
+    {
+        try
+        {
+            await InvokeAsync(UpdateDataAsync);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Error updating data");
+        }
+    }
+
+    private Task UpdateDataAsync()
+    {
+        _boxes = evManager.ChargeBoxes.ToList();
+        _sessions = sessionService.GetAll().ToList();
+        _pendingAuth = authService.GetPending().ToList();
+        
+        StateHasChanged();
+        
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}
