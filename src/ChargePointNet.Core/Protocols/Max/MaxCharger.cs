@@ -19,8 +19,6 @@ public class MaxCharger : IChargeBox, ITickable
     
     private static readonly CurrentLimit LimitLow = new(60, 60, 60, 60);
     private static readonly CurrentLimit LimitHigh = new(60, 160, 160, 160);
-
-    private const string EmptySerial = "0000000000000000";
     
     private readonly MaxModem _modem;
     private readonly IAuthRepository _authRepository;
@@ -29,8 +27,7 @@ public class MaxCharger : IChargeBox, ITickable
     // TODO: What can we map meter type to? Firmware? Hardware version?
     
     private bool _isConfigurationAcknowledged;
-    private bool _isCharging;
-    private bool _isLocked;
+    private byte _ledColor;
     
     private CurrentLimit? _currentLimit;
     private CurrentLimit? _currentLimitAck;
@@ -40,13 +37,15 @@ public class MaxCharger : IChargeBox, ITickable
     private ChargingMode? _mode;
     private MaxMeterInfo? _meterInfo;
     private ChargerConfiguration? _chargerConfiguration;
-    private LedColour _ledColour = LedColour.Off;
-    
+
     internal MaxCharger(MaxModem modem, IAuthRepository authRepository, ISessionRepository sessionRepository)
     {
         _modem = modem;
         _authRepository = authRepository;
         _sessionRepository = sessionRepository;
+        
+        CreatedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = CreatedAt;
     }
 
     public bool Initialized { get; private set; }
@@ -58,9 +57,27 @@ public class MaxCharger : IChargeBox, ITickable
     public string HardwareGeneration => HardwareVersion[^2..];
     public double ChassisTemperature { get; private set; }
     public double SocketTemperature { get; private set; }
+    public bool IsCharging { get; private set; }
+    public bool IsLocked { get; private set; }
+    public bool AutoStart => _chargerConfiguration?.AutoStart == 1;
+    public bool RemoteStart => _chargerConfiguration?.RemoteStart == 1;
 
     private uint CurrentSessionId => (uint?)CurrentSession?.Id.GetHashCode() ?? 0;
     public IChargeSession? CurrentSession { get; private set; }
+    
+    public DateTimeOffset CreatedAt { get; }
+    public DateTimeOffset UpdatedAt { get; private set; }
+
+    public double LedBrightness => _chargerConfiguration?.LedBrightness ?? 0;
+    
+    public LedColor LedColor => _ledColor switch {
+        0 => LedColor.Unknown,
+        1 => LedColor.Green,
+        2 => LedColor.Red,
+        3 => LedColor.Yellow,
+        4 => LedColor.Blue,
+        _ => LedColor.Unknown
+    };
 
     public ChargerBoxStatus Status => _chargerBoxState switch
     {
@@ -93,6 +110,15 @@ public class MaxCharger : IChargeBox, ITickable
             HeartbeatInterval = 900,
             LedEnable = 1
         });
+    }
+
+    public void UpdateAutostart(bool enable)
+    {
+        if (_chargerConfiguration != null)
+        {
+            _chargerConfiguration.AutoStart = (byte)(enable ? 1 : 0);
+            _isConfigurationAcknowledged = false;
+        }
     }
 
     public void UpdateLedBrightness(byte brightness)
@@ -158,10 +184,10 @@ public class MaxCharger : IChargeBox, ITickable
                 Mask = 0xFFFFFFFF,
                 LedBrightness = _chargerConfiguration.LedBrightness,
                 MeterType = (byte)_chargerConfiguration!.MeterType,
-                AutoStart = 0,
+                AutoStart = _chargerConfiguration.AutoStart,
                 Unknown_54 = 900,
-                MeterUpdateInterval = 900,
-                RemoteStart = 0,
+                MeterUpdateInterval = _chargerConfiguration.MeterUpdateInterval,
+                RemoteStart = _chargerConfiguration.RemoteStart,
                 Unknown_72 = 1000,
                 Unknown_10 = "030000"u8.ToArray(),
                 Unknown_18 = "01000100000000000000"u8.ToArray(),
@@ -266,25 +292,27 @@ public class MaxCharger : IChargeBox, ITickable
                 });
                 
                 _chargerBoxState = (ChargerBoxState)request.State;
-                _ledColour = (LedColour)request.LedColour;
-                _isCharging = request.IsCharging == 1;
-                _isLocked = request.IsLocked == 1;
+                _ledColor = request.LedColor;
+                IsCharging = request.IsCharging == 1;
+                IsLocked = request.IsLocked == 1;
                 ChassisTemperature = request.ChassisTemperature / 10d;
                 SocketTemperature = request.SocketTemperature / 10d;
 
                 if (CurrentSession != null && CurrentSessionId == request.SessionId)
                 {
-                    if (CurrentSession.IsCharging != _isCharging)
+                    if (CurrentSession.IsCharging != IsCharging)
                     {
-                        Logger.Information("Session {SessionId} is now {State}", CurrentSession.Id, _isCharging ? "charging" : "not charging");
+                        Logger.Information("Session {SessionId} is now {State}", CurrentSession.Id, IsCharging ? "charging" : "not charging");
                     }
                     
-                    CurrentSession.IsCharging = _isCharging;
+                    CurrentSession.IsCharging = IsCharging;
                     CurrentSession.MeterValueCurrent = request.MeterValue / 1000d;
                     CurrentSession.UpdatedAt = DateTimeOffset.UtcNow;
                 }
                 
-                Logger.Debug("Charger state: {State}, color: {Colour}", _chargerBoxState, _ledColour);
+                UpdatedAt = DateTimeOffset.UtcNow;
+                
+                Logger.Debug("Charger state: {State}, color: {Color}", _chargerBoxState, _ledColor);
                 break;
             }
             case GET_METER_INFO_RESPONSE response:
@@ -293,18 +321,10 @@ public class MaxCharger : IChargeBox, ITickable
                 
                 _meterInfo = new MaxMeterInfo
                 {
-                    Version = response.VersionNumberLength != 0
-                        ? response.VersionNumber![..response.VersionNumberLength]
-                        : null,
-                    Model = response.ModelNameLength != 0
-                        ? response.ModelName![..response.ModelNameLength]
-                        : null,
-                    Serial = response.SerialNumber != EmptySerial
-                        ? response.SerialNumber
-                        : null,
-                    MainsFrequency = response.MainsFrequency != 0
-                        ? response.MainsFrequency / 100d
-                        : null,
+                    Version = response.VersionNumber![..response.VersionNumberLength],
+                    Model = response.ModelName![..response.ModelNameLength],
+                    Serial = response.SerialNumber!,
+                    MainsFrequency = response.MainsFrequency / 100d,
                 };
                 break;
             }

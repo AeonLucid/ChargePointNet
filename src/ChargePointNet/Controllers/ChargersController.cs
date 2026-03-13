@@ -1,5 +1,6 @@
 ﻿using ChargePointNet.Core;
 using ChargePointNet.Models;
+using ChargePointNet.Models.Requests;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ChargePointNet.Controllers;
@@ -27,20 +28,7 @@ public class ChargersController : ControllerBase
         {
             Results = _evManager.ChargeBoxes
                 .Where(x => x.Initialized)
-                .Select(x => new Charger
-                {
-                    Serial = x.Serial,
-                    Status = x.Status,
-                    HardwareVersion = x.HardwareVersion,
-                    FirmwareVersion = x.FirmwareVersion,
-                    Meter = x.Meter != null ? new ChargerMeter
-                    {
-                        Version = x.Meter.Version,
-                        Model = x.Meter.Model,
-                        Serial = x.Meter.Serial,
-                        MainsFrequency = x.Meter.MainsFrequency
-                    } : null
-                })
+                .Select(x => new Charger(x))
         });
     }
     
@@ -57,26 +45,35 @@ public class ChargersController : ControllerBase
         var charger = _evManager.FindBySerial(serial);
         if (charger == null)
         {
-            return NotFound(new ErrorResponse
-            {
-                Message = $"Charger with serial {serial} not found."
-            });
+            return NotFound();
         }
 
-        return Ok(new Charger
+        return Ok(new Charger(charger));
+    }
+    
+    /// <summary>
+    ///     Update autostart
+    /// </summary>
+    /// <param name="serial">The serial of a charger.</param>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    [HttpPost("{serial}/autostart")]
+    [Consumes("application/json")]
+    [Produces("application/json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult UpdateAutostart([FromRoute(Name = "serial")] string serial, [FromBody] AutostartUpdateRequest request)
+    {
+        var charger = _evManager.FindBySerial(serial);
+        if (charger == null)
         {
-            Serial = charger.Serial,
-            Status = charger.Status,
-            HardwareVersion = charger.HardwareVersion,
-            FirmwareVersion = charger.FirmwareVersion,
-            Meter = charger.Meter != null ? new ChargerMeter
-            {
-                Version = charger.Meter.Version,
-                Model = charger.Meter.Model,
-                Serial = charger.Meter.Serial,
-                MainsFrequency = charger.Meter.MainsFrequency
-            } : null
-        });
+            return NotFound();
+        }
+        
+        charger.UpdateAutostart(request.Enabled);
+        
+        return Ok();
     }
     
     /// <summary>
@@ -96,10 +93,7 @@ public class ChargersController : ControllerBase
         var charger = _evManager.FindBySerial(serial);
         if (charger == null)
         {
-            return NotFound(new ErrorResponse
-            {
-                Message = $"Charger with serial {serial} not found."
-            });
+            return NotFound();
         }
         
         charger.UpdateLedBrightness(request.Brightness);

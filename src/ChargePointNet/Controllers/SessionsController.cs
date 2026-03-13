@@ -16,7 +16,7 @@ public class SessionsController : ControllerBase
     }
     
     /// <summary>
-    ///     Get charging sessions
+    ///     Get all sessions
     /// </summary>
     [HttpGet]
     [Produces("application/json")]
@@ -27,19 +27,26 @@ public class SessionsController : ControllerBase
         
         return Ok(new SessionList
         {
-            Results = sessions.OrderByDescending(x => x.CreatedAt).Select(y => new Session
-            {
-                SessionId = y.Id,
-                Serial = y.Key.Serial,
-                CardNumber = y.Key.CardNumber,
-                IsCharging = y.IsCharging,
-                MeterValueStart = y.MeterValueStart,
-                MeterValueCurrent = y.MeterValueCurrent,
-                MeterValueEnd = y.MeterValueEnd,
-                CreatedAt = y.CreatedAt,
-                UpdatedAt = y.UpdatedAt,
-                EndedAt = y.EndedAt,
-            })
+            Results = sessions.OrderByDescending(x => x.CreatedAt).Select(y => new Session(y))
         });
+    }
+
+    /// <summary>
+    ///     Get a single session
+    /// </summary>
+    /// <param name="sessionId"></param>
+    [HttpGet("{sessionId:guid}")]
+    [Produces("application/json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult<Session> GetSession([FromRoute(Name = "sessionId")] Guid sessionId)
+    {
+        var session = _sessionService.Find(sessionId);
+        if (session == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new Session(session));
     }
 }

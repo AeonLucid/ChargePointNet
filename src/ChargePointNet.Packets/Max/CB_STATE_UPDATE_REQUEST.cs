@@ -6,7 +6,7 @@ public partial class CB_STATE_UPDATE_REQUEST : IHexPacket
     [PacketField(FixedSize = 4, Raw = true)]
     private byte[]? Unknown_2 { get; set; }
     public byte IsCharging { get; set; }
-    public byte LedColour { get; set; }
+    public byte LedColor { get; set; }
     public byte IsLocked { get; set; }
     public byte CableMaxCurrent { get; set; }
     [PacketField(FixedSize = 4, Raw = true)]

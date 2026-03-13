@@ -1,29 +1,40 @@
-﻿namespace ChargePointNet.Models;
+﻿using ChargePointNet.Services.Auth;
+
+namespace ChargePointNet.Models;
 
 public class AuthPending
 {
+    public AuthPending(AuthRequest request)
+    {
+        RequestId = request.Id;
+        Serial = request.Key.Serial;
+        CardNumber = request.Key.CardNumber;
+        CreatedAt = request.CreatedAt;
+        ExpiresAt = request.ExpiresAt;
+    }
+
     /// <summary>
     ///     Unique identifier for the request.
     /// </summary>
-    public required Guid RequestId { get; init; }
-    
+    public Guid RequestId { get; init; }
+
     /// <summary>
     ///     Serial number of the charger.
     /// </summary>
-    public required string Serial { get; set; }
-    
+    public string Serial { get; init; }
+
     /// <summary>
     ///     Card number of the NFC tag.
     /// </summary>
-    public required string CardNumber { get; set; }
+    public string CardNumber { get; init; }
 
     /// <summary>
     ///     Time when the request was created.
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
-    
+    public DateTimeOffset CreatedAt { get; init; }
+
     /// <summary>
     ///     Time when the request expires and can no longer be authorized.
     /// </summary>
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; init; }
 }

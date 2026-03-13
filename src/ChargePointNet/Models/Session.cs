@@ -1,54 +1,70 @@
-﻿namespace ChargePointNet.Models;
+﻿using ChargePointNet.Services.Sessions;
+
+namespace ChargePointNet.Models;
 
 public class Session
 {
+    public Session(ChargeSession y)
+    {
+        SessionId = y.Id;
+        Serial = y.Key.Serial;
+        CardNumber = y.Key.CardNumber;
+        IsCharging = y.IsCharging;
+        MeterValueStart = y.MeterValueStart;
+        MeterValueCurrent = y.MeterValueCurrent;
+        MeterValueEnd = y.MeterValueEnd;
+        CreatedAt = y.CreatedAt;
+        UpdatedAt = y.UpdatedAt;
+        EndedAt = y.EndedAt;
+    }
+
     /// <summary>
     ///     Unique identifier for the session.
     /// </summary>
-    public required Guid SessionId { get; init; }
+    public Guid SessionId { get; init; }
     
     /// <summary>
     ///     Serial number of the charger.
     /// </summary>
-    public required string Serial { get; set; }
+    public string Serial { get; init; }
     
     /// <summary>
     ///     Card number of the NFC tag.
     /// </summary>
-    public required string CardNumber { get; set; }
+    public string CardNumber { get; init; }
     
     /// <summary>
     ///     Whether the charger is actively charging the EV.
     /// </summary>
-    public required bool IsCharging { get; set; }
+    public bool IsCharging { get; init; }
     
     /// <summary>
     ///     Value of the meter in kWh at the start of the session.
     /// </summary>
-    public required double? MeterValueStart { get; set; }
+    public double? MeterValueStart { get; init; }
     
     /// <summary>
     ///     Value of the meter in kWh at the current moment.
     /// </summary>
-    public required double? MeterValueCurrent { get; set; }
+    public double? MeterValueCurrent { get; init; }
     
     /// <summary>
     ///     Value of the meter in kWh at the end of the session.
     /// </summary>
-    public required double? MeterValueEnd { get; set; }
+    public double? MeterValueEnd { get; init; }
     
     /// <summary>
     ///     Time when the session was created.
     /// </summary>
-    public required DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; init; }
     
     /// <summary>
     ///     Time when the session was last updated.
     /// </summary>
-    public required DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; init; }
     
     /// <summary>
     ///     Time when the session ended. Null if the session is still active.
     /// </summary>
-    public required DateTimeOffset? EndedAt { get; set; }
+    public DateTimeOffset? EndedAt { get; init; }
 }

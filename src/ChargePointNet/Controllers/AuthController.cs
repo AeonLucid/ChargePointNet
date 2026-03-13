@@ -25,14 +25,7 @@ public class AuthController : ControllerBase
     {
         return Ok(new AuthPendingList
         {
-            Results = _authService.GetPending().Select(x => new AuthPending
-            {
-                RequestId = x.Id,
-                Serial = x.Key.Serial,
-                CardNumber = x.Key.CardNumber,
-                CreatedAt = x.CreatedAt,
-                ExpiresAt = x.ExpiresAt,
-            })
+            Results = _authService.GetPending().Select(x => new AuthPending(x))
         });
     }
 

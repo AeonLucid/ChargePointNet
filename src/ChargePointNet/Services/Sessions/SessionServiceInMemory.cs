@@ -4,6 +4,7 @@ using ChargePointNet.Core.Interfaces;
 
 namespace ChargePointNet.Services.Sessions;
 
+// TODO: Clean up sessions periodically. X days?
 public class SessionServiceInMemory : ISessionService
 {
     private readonly ConcurrentDictionary<string, List<ChargeSession>> _sessions;
@@ -24,6 +25,11 @@ public class SessionServiceInMemory : ISessionService
         store.Add(session);
 
         return session;
+    }
+
+    public ChargeSession? Find(Guid id)
+    {
+        return _sessions.Values.SelectMany(x => x).FirstOrDefault(x => x.Id == id);
     }
 
     public IEnumerable<ChargeSession> GetAll()
