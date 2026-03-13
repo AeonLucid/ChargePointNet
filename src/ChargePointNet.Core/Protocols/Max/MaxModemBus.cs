@@ -159,7 +159,7 @@ internal class MaxModemBus : IDisposable
                 continue;
             }
             
-            Logger.Debug("{Device}: Sending to 0x{Address:X2} {Command} {@Data}", _device, packet.Destination, packet.Command, packet.Data);
+            Logger.Verbose("{Device}: Sending to 0x{Address:X2} {Command} {@Data}", _device, packet.Destination, packet.Command, packet.Data);
             
             await _device.WriteAsync(packetBuffer);
         }
@@ -199,7 +199,7 @@ internal class MaxModemBus : IDisposable
                              continue;
                         }
                         
-                        Logger.Debug("{Device}: Received from 0x{Address:X2} {Command} {@Data}", _device, packet.Source, packet.Command, packet.Data);
+                        Logger.Verbose("{Device}: Received from 0x{Address:X2} {Command} {@Data}", _device, packet.Source, packet.Command, packet.Data);
 
                         if (OnPacketReceived != null)
                         {

@@ -85,10 +85,12 @@ public class MaxCharger : IChargeBox, ITickable
 
     public void Initialize()
     {
+        Logger.Information("Initializing charger {Serial}", Serial);
+        
         Send(MaxCommand.CONNECTION_STATE_CHANGED, new CONNECTION_STATE_CHANGED_REQUEST
         {
             // TODO: Does nothing? Actual interval is 16 minutes (960 secs).
-            HeartbeatInterval = 120,
+            HeartbeatInterval = 900,
             LedEnable = 1
         });
     }
@@ -171,6 +173,15 @@ public class MaxCharger : IChargeBox, ITickable
             return false;
         }
 
+        if (!Initialized)
+        {
+            Logger.Information("Charger initialized. " +
+                               "Serial: {Serial}, " +
+                               "Hardware: {HardwareVersion}, " +
+                               "Firmware: {FirmwareVersion}, " +
+                               "Meter type: {MeterType}", Serial, HardwareVersion, FirmwareVersion, _chargerConfiguration.MeterType);
+        }
+        
         Initialized = true;
         return true;
     }
@@ -216,6 +227,8 @@ public class MaxCharger : IChargeBox, ITickable
     {
         if (packet.Command == MaxCommand.HEARTBEAT)
         {
+            Logger.Debug("Received heartbeat from {Source}", packet.Source);
+            
             Send(MaxCommand.HEARTBEAT);
             return;
         }
@@ -241,7 +254,7 @@ public class MaxCharger : IChargeBox, ITickable
                     _currentLimitAck = null;
                 }
                 
-                // Logger.Debug("Charging state updated: {State}", Mode);
+                Logger.Debug("Charging mode updated: {State}", _mode);
                 break;
             }
             case CB_STATE_UPDATE_REQUEST request:
@@ -261,16 +274,23 @@ public class MaxCharger : IChargeBox, ITickable
 
                 if (CurrentSession != null && CurrentSessionId == request.SessionId)
                 {
+                    if (CurrentSession.IsCharging != _isCharging)
+                    {
+                        Logger.Information("Session {SessionId} is now {State}", CurrentSession.Id, _isCharging ? "charging" : "not charging");
+                    }
+                    
                     CurrentSession.IsCharging = _isCharging;
                     CurrentSession.MeterValueCurrent = request.MeterValue / 1000d;
                     CurrentSession.UpdatedAt = DateTimeOffset.UtcNow;
                 }
                 
-                Logger.Debug("Charger state: {State}, mode: {Mode}, color: {Colour}", _chargerBoxState, _mode, _ledColour);
+                Logger.Debug("Charger state: {State}, color: {Colour}", _chargerBoxState, _ledColour);
                 break;
             }
             case GET_METER_INFO_RESPONSE response:
             {
+                Logger.Information("Serial {Serial}: received meter info", Serial);
+                
                 _meterInfo = new MaxMeterInfo
                 {
                     Version = response.VersionNumberLength != 0
@@ -290,6 +310,8 @@ public class MaxCharger : IChargeBox, ITickable
             }
             case GET_CB_CONFIGURATION_RESPONSE response:
             {
+                Logger.Information("Serial {Serial}: received configuration", Serial);
+                
                 _chargerConfiguration = new ChargerConfiguration
                 {
                     MeterUpdateInterval = response.MeterUpdateInterval,
@@ -302,11 +324,15 @@ public class MaxCharger : IChargeBox, ITickable
             }
             case SET_CB_CONFIGURATION_RESPONSE response:
             {
+                Logger.Information("Serial {Serial}: updated configuration", Serial);
+                
                 _isConfigurationAcknowledged = response.Ack == MaxAcknowledgment.ACK;
                 break;
             }
             case AUTHORIZE_CARD_REQUEST request:
             {
+                Logger.Information("Requesting authorization for card {CardNumber}", request.CardNumberValue);
+                
                 var key = new AuthorizationContext(Serial, request.CardNumberValue![..request.CardNumberLength]);
                 var pending = _authRepository.GetOrCreate(key, AuthTimeout);
                 if (pending.IsPending)
@@ -315,6 +341,8 @@ public class MaxCharger : IChargeBox, ITickable
                 }
                 
                 _authRepository.Remove(key);
+                
+                Logger.Information("Card {CardNumber} has been {Value}", request.CardNumberValue, pending.IsAuthorized ? "authorized" : "unauthorized");
                 
                 Send(MaxCommand.AUTHORIZE_CARD, new AUTHORIZE_CARD_RESPONSE
                 {
