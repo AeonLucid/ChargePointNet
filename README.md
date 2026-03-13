@@ -26,6 +26,10 @@ If you wish to develop the project further.
 2. Open `src/ChargePointNet.sln` with [Rider](https://www.jetbrains.com/rider/) or [Visual Studio](https://visualstudio.microsoft.com/).
 3. Run `ChargePointNet`.
 
+## Issues
+
+If you get the error on Windows that the device is malfunctioning, you need to replace the CH340 driver by installing the CH340 3.4 driver from https://sparks.gogo.co.nz/ch340.html.
+
 ## Credits
 
 Thanks to Maarten Tromp for laying the ground work on reverse engineering the EVBox chargers.
