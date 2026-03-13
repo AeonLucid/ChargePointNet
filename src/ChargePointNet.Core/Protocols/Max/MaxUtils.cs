@@ -12,4 +12,14 @@ internal static class MaxUtils
     {
         return (uint)(DateTime.UtcNow - Epoch).TotalSeconds;
     }
+
+    /// <summary>
+    ///     Retrieve time in seconds since 2000-1-1 for a given date time.
+    /// </summary>
+    /// <param name="dateTime">The date time to convert to seconds since epoch.</param>
+    /// <returns></returns>
+    public static uint Timestamp(DateTimeOffset dateTime)
+    {
+        return (uint)(dateTime - Epoch).TotalSeconds;
+    }
 }

@@ -5,8 +5,9 @@ namespace ChargePointNet.Services.Auth;
 
 public class AuthRequest : IPendingAuthorization
 {
+    public required AuthorizationContext Key { get; init; }
+    
     public Guid Id { get; } = Guid.NewGuid();
-    public required AuthRequestKey Key { get; init; }
     
     public bool IsPending { get; set; } = true;
     public bool IsAuthorized { get; set; }

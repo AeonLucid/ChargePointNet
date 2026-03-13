@@ -1,4 +1,5 @@
 ﻿using ChargePointNet.Core.Data;
+using ChargePointNet.Core.Interfaces;
 
 namespace ChargePointNet.Core;
 
@@ -12,6 +13,8 @@ public interface IChargeBox : IDisposable
     double SocketTemperature { get; }
     ChargerBoxStatus Status { get; }
     ChargerMeter? Meter { get; }
+    
+    IChargeSession? CurrentSession { get; }
     
     void UpdateLedBrightness(byte brightness);
 }

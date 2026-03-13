@@ -5,7 +5,6 @@ using ChargePointNet.Config;
 using ChargePointNet.Core;
 using ChargePointNet.Core.Net;
 using ChargePointNet.Core.Net.Devices;
-using ChargePointNet.Core.Protocols;
 using Microsoft.Extensions.Options;
 
 namespace ChargePointNet.Services;

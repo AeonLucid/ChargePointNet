@@ -4,16 +4,16 @@ using ChargePointNet.Core.Interfaces;
 
 namespace ChargePointNet.Services.Auth;
 
-public class InMemoryAuthService : IAuthService
+public class AuthServiceInMemory : IAuthService
 {
-    private readonly ConcurrentDictionary<AuthRequestKey, AuthRequest> _requests;
+    private readonly ConcurrentDictionary<AuthorizationContext, AuthRequest> _requests;
     
-    public InMemoryAuthService()
+    public AuthServiceInMemory()
     {
         _requests = [];
     }
 
-    public IPendingAuthorization GetOrCreate(AuthRequestKey key, TimeSpan timeout)
+    public IPendingAuthorization GetOrCreate(AuthorizationContext key, TimeSpan timeout)
     {
         var time = DateTimeOffset.UtcNow;
 
@@ -40,7 +40,7 @@ public class InMemoryAuthService : IAuthService
         });
     }
 
-    public void Remove(AuthRequestKey key)
+    public void Remove(AuthorizationContext key)
     {
         _requests.Remove(key, out _);
     }

@@ -8,9 +8,9 @@ namespace ChargePointNet.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly InMemoryAuthService _authService;
+    private readonly IAuthService _authService;
 
-    public AuthController(InMemoryAuthService authService)
+    public AuthController(IAuthService authService)
     {
         _authService = authService;
     }

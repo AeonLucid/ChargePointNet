@@ -23,10 +23,13 @@ public class MaxCharger : IChargeBox, ITickable
     private const string EmptySerial = "0000000000000000";
     
     private readonly MaxModem _modem;
-    private readonly IAuthService _authService;
+    private readonly IAuthRepository _authRepository;
+    private readonly ISessionRepository _sessionRepository;
 
     // TODO: What can we map meter type to? Firmware? Hardware version?
+    
     private bool _isConfigurationAcknowledged;
+    private bool _isCharging;
     private bool _isLocked;
     
     private CurrentLimit? _currentLimit;
@@ -39,10 +42,11 @@ public class MaxCharger : IChargeBox, ITickable
     private ChargerConfiguration? _chargerConfiguration;
     private LedColour _ledColour = LedColour.Off;
     
-    internal MaxCharger(MaxModem modem, IAuthService authService)
+    internal MaxCharger(MaxModem modem, IAuthRepository authRepository, ISessionRepository sessionRepository)
     {
         _modem = modem;
-        _authService = authService;
+        _authRepository = authRepository;
+        _sessionRepository = sessionRepository;
     }
 
     public bool Initialized { get; private set; }
@@ -54,6 +58,9 @@ public class MaxCharger : IChargeBox, ITickable
     public string HardwareGeneration => HardwareVersion[^2..];
     public double ChassisTemperature { get; private set; }
     public double SocketTemperature { get; private set; }
+
+    private uint CurrentSessionId => (uint?)CurrentSession?.Id.GetHashCode() ?? 0;
+    public IChargeSession? CurrentSession { get; private set; }
 
     public ChargerBoxStatus Status => _chargerBoxState switch
     {
@@ -221,12 +228,15 @@ public class MaxCharger : IChargeBox, ITickable
                 {
                     Ack = MaxAcknowledgment.ACK
                 });
+
+                var previousMode = _mode;
                 
                 _mode = (ChargingMode)request.State;
 
                 // Clear the current limit to force reconfiguration.
                 // TODO: Unable to get "Charging" mode, only from CB_STATE_UPDATE.
-                if (_mode == ChargingMode.Ready || _mode == ChargingMode.Charging)
+                //  (_mode == ChargingMode.Ready || _mode == ChargingMode.Charging)
+                if (previousMode == ChargingMode.Available && _mode == ChargingMode.Ready)
                 {
                     _currentLimitAck = null;
                 }
@@ -238,23 +248,23 @@ public class MaxCharger : IChargeBox, ITickable
             {
                 Send(MaxCommand.CB_STATE_UPDATE, new CB_STATE_UPDATE_RESPONSE
                 {
-                    SessionId = request.SessionId,
+                    SessionId = CurrentSessionId,
                     Timestamp = MaxUtils.Timestamp()
                 });
                 
                 _chargerBoxState = (ChargerBoxState)request.State;
                 _ledColour = (LedColour)request.LedColour;
+                _isCharging = request.IsCharging == 1;
                 _isLocked = request.IsLocked == 1;
                 ChassisTemperature = request.ChassisTemperature / 10d;
                 SocketTemperature = request.SocketTemperature / 10d;
-                
-                // Status = ChargeBoxState switch
-                // {
-                //     ChargerBoxState.Charging => ChargeBoxStatus.Charging,
-                //     ChargerBoxState.Idle => ChargeBoxStatus.Idle,
-                //     ChargerBoxState.Error => ChargeBoxStatus.Error,
-                //     _ => ChargeBoxStatus.Unknown
-                // };
+
+                if (CurrentSession != null && CurrentSessionId == request.SessionId)
+                {
+                    CurrentSession.IsCharging = _isCharging;
+                    CurrentSession.MeterValueCurrent = request.MeterValue / 1000d;
+                    CurrentSession.UpdatedAt = DateTimeOffset.UtcNow;
+                }
                 
                 Logger.Debug("Charger state: {State}, mode: {Mode}, color: {Colour}", _chargerBoxState, _mode, _ledColour);
                 break;
@@ -297,14 +307,14 @@ public class MaxCharger : IChargeBox, ITickable
             }
             case AUTHORIZE_CARD_REQUEST request:
             {
-                var key = new AuthRequestKey(Serial, request.CardNumberValue![..request.CardNumberLength]);
-                var pending = _authService.GetOrCreate(key, AuthTimeout);
+                var key = new AuthorizationContext(Serial, request.CardNumberValue![..request.CardNumberLength]);
+                var pending = _authRepository.GetOrCreate(key, AuthTimeout);
                 if (pending.IsPending)
                 {
                     return;
                 }
                 
-                _authService.Remove(key);
+                _authRepository.Remove(key);
                 
                 Send(MaxCommand.AUTHORIZE_CARD, new AUTHORIZE_CARD_RESPONSE
                 {
@@ -320,21 +330,39 @@ public class MaxCharger : IChargeBox, ITickable
                 _currentLimitAck = _currentLimitSent;
                 break;
             }
-            case METERING_START_REQUEST meteringStartRequest:
+            case METERING_START_REQUEST request:
             {
-                // TODO: Handle metering start
+                var key = new AuthorizationContext(Serial, request.CardNumberValue![..request.CardNumberLength]);
+                
+                CurrentSession = _sessionRepository.CreateSession(key);
+                CurrentSession.MeterValueStart = request.MeterValue / 1000d;
+                
+                Logger.Information("Session {SessionId} started. Meter value: {MeterValue} kWh", CurrentSession.Id, request.MeterValue / 1000d);
                 
                 Send(MaxCommand.METERING_START, new METERING_START_RESPONSE
                 {
                     State = 0x01,
-                    SessionId = 7331, // TODO: Proper session logic
-                    Timestamp = MaxUtils.Timestamp()
+                    SessionId = CurrentSessionId,
+                    Timestamp = MaxUtils.Timestamp(CurrentSession.CreatedAt)
                 });
                 break;
             }
-            case METERING_END_REQUEST meteringEndRequest:
+            case METERING_END_REQUEST request:
             {
-                // TODO: Handle metering end
+                if (CurrentSession != null && CurrentSessionId == request.SessionId)
+                {
+                    Logger.Information("Session {SessionId} ended. Meter value: {MeterValue} kWh", CurrentSession.Id, request.MeterValue / 1000d);
+                    
+                    CurrentSession.IsCharging = false;
+                    CurrentSession.MeterValueEnd = request.MeterValue / 1000d;
+                    CurrentSession.UpdatedAt = DateTimeOffset.UtcNow;
+                    CurrentSession.EndedAt = CurrentSession.UpdatedAt;
+                    CurrentSession = null;
+                }
+                else
+                {
+                    Logger.Warning("Received METERING_END_REQUEST for unknown session {SessionId}", request.SessionId);
+                }
                 
                 Send(MaxCommand.METERING_END, new METERING_END_RESPONSE
                 {

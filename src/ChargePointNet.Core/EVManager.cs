@@ -10,8 +10,9 @@ public class EVManager : IDisposable
 {
     private static readonly ILogger Logger = Log.ForContext<EVManager>();
     
-    private readonly IAuthService _authService;
-    
+    private readonly IAuthRepository _authRepository;
+    private readonly ISessionRepository _sessionRepository;
+
     private readonly Dictionary<string, IModem> _modems;
     private readonly Dictionary<string, IChargeBox> _boxes;
     private readonly List<ITickable> _tickers;
@@ -20,9 +21,10 @@ public class EVManager : IDisposable
     private bool _stopped;
     private bool _disposed;
     
-    public EVManager(IAuthService authService)
+    public EVManager(IAuthRepository authRepository, ISessionRepository sessionRepository)
     {
-        _authService = authService;
+        _authRepository = authRepository;
+        _sessionRepository = sessionRepository;
         _modems = [];
         _boxes = [];
         _tickers = [];
@@ -55,7 +57,7 @@ public class EVManager : IDisposable
 
     private async Task TickLoop()
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
         
         try
         {
@@ -92,7 +94,7 @@ public class EVManager : IDisposable
         switch (device.Protocol)
         {
             case EVProtocol.Max:
-                _modems[device.Identifier] = new MaxModem(device, _authService);
+                _modems[device.Identifier] = new MaxModem(device, _authRepository, _sessionRepository);
                 _modems[device.Identifier].Start();
 
                 newEntry = _modems[device.Identifier];

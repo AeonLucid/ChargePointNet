@@ -1,9 +1,9 @@
 ﻿namespace ChargePointNet.Models;
 
+/// <summary>
+///     List containing initialized and connected chargers.
+/// </summary>
 public class ChargerList
 {
-    /// <summary>
-    ///     List containing connected and initialized chargers.
-    /// </summary>
     public required IEnumerable<Charger> Results { get; set; }
 }

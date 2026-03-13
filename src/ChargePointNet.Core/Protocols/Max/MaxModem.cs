@@ -16,16 +16,18 @@ public class MaxModem : IModem, ITickable
     private static readonly ILogger Logger = Log.ForContext<MaxModem>();
     
     private readonly IDevice _device;
-    private readonly IAuthService _authService;
+    private readonly IAuthRepository _authRepository;
+    private readonly ISessionRepository _sessionRepository;
     private readonly MaxModemBus _bus;
     private readonly ConcurrentDictionary<byte, MaxCharger> _chargers;
 
     private bool _disposed;
 
-    public MaxModem(IDevice device, IAuthService authService)
+    public MaxModem(IDevice device, IAuthRepository authRepository, ISessionRepository sessionRepository)
     {
         _device = device;
-        _authService = authService;
+        _authRepository = authRepository;
+        _sessionRepository = sessionRepository;
         _bus = new MaxModemBus(device);
         _bus.OnPacketReceived += OnPacketReceived;
         _chargers = [];
@@ -113,7 +115,7 @@ public class MaxModem : IModem, ITickable
             return null;
         }
 
-        var charger = new MaxCharger(this, _authService)
+        var charger = new MaxCharger(this, _authRepository, _sessionRepository)
         {
             Address = address.Value,
             Serial = serial,

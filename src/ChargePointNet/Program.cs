@@ -4,6 +4,7 @@ using ChargePointNet.Core.Interfaces;
 using ChargePointNet.Services;
 using ChargePointNet.Services.Auth;
 using ChargePointNet.Services.OpenApi;
+using ChargePointNet.Services.Sessions;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
@@ -25,12 +26,31 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console());
 
+    builder.Services.Configure<AuthConfig>(builder.Configuration.GetSection(AuthConfig.Section));
     builder.Services.Configure<DevicesConfig>(builder.Configuration.GetSection(DevicesConfig.Section));
     builder.Services.AddHostedService<InitializationService>();
     builder.Services.AddHostedService<DeviceRegistrationService>();
     builder.Services.AddSingleton<EVManager>();
-    builder.Services.AddSingleton<InMemoryAuthService>();
-    builder.Services.AddSingleton<IAuthService>(sp => sp.GetRequiredService<InMemoryAuthService>());
+
+    var auth = builder.Configuration.GetSection(AuthConfig.Section).Get<AuthConfig>();
+    if (auth != null && auth.Automatic)
+    {
+        Log.Information("Using automatic authorization, using configured allowed list");
+        
+        builder.Services.AddSingleton<IAuthService, AuthServiceAutomatic>();
+    }
+    else
+    {
+        Log.Information("Using manual authorization, pending requests must be approved or denied via the API");
+        
+        builder.Services.AddSingleton<IAuthService, AuthServiceInMemory>();
+    }
+    
+    builder.Services.AddSingleton<IAuthRepository>(sp => sp.GetRequiredService<IAuthService>());
+    
+    builder.Services.AddSingleton<ISessionService, SessionServiceInMemory>();
+    builder.Services.AddSingleton<ISessionRepository>(sp => sp.GetRequiredService<ISessionService>());
+    
     builder.Services.AddControllers();
     builder.Services.AddOpenApi(options =>
     {
