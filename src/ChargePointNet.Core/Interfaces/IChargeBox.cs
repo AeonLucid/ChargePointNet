@@ -1,7 +1,6 @@
 ﻿using ChargePointNet.Core.Data;
-using ChargePointNet.Core.Interfaces;
 
-namespace ChargePointNet.Core;
+namespace ChargePointNet.Core.Interfaces;
 
 public interface IChargeBox : IDisposable
 {
@@ -68,6 +67,11 @@ public interface IChargeBox : IDisposable
     ChargerBoxStatus Status { get; }
     
     ChargerMeter? Meter { get; }
+    
+    /// <summary>
+    ///     Current phase information of the charger. Contains voltage, current and power factor for each active phase.
+    /// </summary>
+    Phase[] Phases { get; }
     
     /// <summary>
     ///     Current charging session, if any. Null if no session is active.

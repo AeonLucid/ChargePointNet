@@ -1,4 +1,6 @@
-﻿namespace ChargePointNet.Core;
+﻿using ChargePointNet.Core.Interfaces;
+
+namespace ChargePointNet.Core;
 
 /// <summary>
 ///     Represents a modem that also is a <see cref="IChargeBox"/> 

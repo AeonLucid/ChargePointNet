@@ -43,7 +43,8 @@ public class MaxCharger : IChargeBox, ITickable
         _modem = modem;
         _authRepository = authRepository;
         _sessionRepository = sessionRepository;
-        
+
+        Phases = [];
         CreatedAt = DateTimeOffset.UtcNow;
         UpdatedAt = CreatedAt;
     }
@@ -91,6 +92,8 @@ public class MaxCharger : IChargeBox, ITickable
         _ => throw new ArgumentOutOfRangeException()
     };
 
+    public Phase[] Phases { get; private set; }
+    
     public ChargerMeter? Meter => _meterInfo != null
         ? new ChargerMeter(
             _chargerConfiguration!.MeterType == 0 ? ChargerMeterType.Serial : ChargerMeterType.Pulse,
@@ -238,6 +241,13 @@ public class MaxCharger : IChargeBox, ITickable
         }
         
         _currentLimitSent = newLimit;
+
+        if (Phases.Length == 3)
+        {
+            Phases[0].CurrentLimit = newLimit.Phase1 / 10d;
+            Phases[1].CurrentLimit = newLimit.Phase2 / 10d;
+            Phases[2].CurrentLimit = newLimit.Phase3 / 10d;
+        }
         
         Send(MaxCommand.SET_CURRENT_LIMIT, new SET_CURRENT_LIMIT_REQUEST
         {
@@ -308,6 +318,29 @@ public class MaxCharger : IChargeBox, ITickable
                     CurrentSession.IsCharging = IsCharging;
                     CurrentSession.MeterValueCurrent = request.MeterValue / 1000d;
                     CurrentSession.UpdatedAt = DateTimeOffset.UtcNow;
+                }
+
+                if (Phases.Length == 0)
+                {
+                    Phases = [
+                        new Phase(request.VoltagePhase1, request.CurrentPhase1 / 100d, request.PowerFactorPhase1 / 1000d),
+                        new Phase(request.VoltagePhase2, request.CurrentPhase2 / 100d, request.PowerFactorPhase2 / 1000d),
+                        new Phase(request.VoltagePhase3, request.CurrentPhase3 / 100d, request.PowerFactorPhase3 / 1000d),
+                    ];
+                }
+                else
+                {
+                    Phases[0].Voltage = request.VoltagePhase1;
+                    Phases[0].Current = request.CurrentPhase1 / 100d;
+                    Phases[0].PowerFactor = request.PowerFactorPhase1 / 1000d;
+                    
+                    Phases[1].Voltage = request.VoltagePhase2;
+                    Phases[1].Current = request.CurrentPhase2 / 100d;
+                    Phases[1].PowerFactor = request.PowerFactorPhase2 / 1000d;
+                    
+                    Phases[2].Voltage = request.VoltagePhase3;
+                    Phases[2].Current = request.CurrentPhase3 / 100d;
+                    Phases[2].PowerFactor = request.PowerFactorPhase3 / 1000d;
                 }
                 
                 UpdatedAt = DateTimeOffset.UtcNow;

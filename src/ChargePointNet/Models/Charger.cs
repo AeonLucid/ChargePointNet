@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
-using ChargePointNet.Core;
 using ChargePointNet.Core.Data;
+using ChargePointNet.Core.Interfaces;
 
 namespace ChargePointNet.Models;
 
@@ -21,6 +21,7 @@ public class Charger
         LedBrightness = box.LedBrightness;
         LedColor = box.LedColor;
         CurrentSessionId = box.CurrentSession?.Id;
+        Phases = box.Phases;
         Meter = box.Meter != null ? new MeterInfo(box.Meter) : null;
         CreatedAt = box.CreatedAt;
         UpdatedAt = box.UpdatedAt;
@@ -92,6 +93,11 @@ public class Charger
     ///     The ID of the current <see cref="Session"/>, if any. Null if no session is active.
     /// </summary>
     public Guid? CurrentSessionId { get; init; }
+    
+    /// <summary>
+    ///     <inheritdoc cref="IChargeBox.Phases"/>
+    /// </summary>
+    public Phase[] Phases { get; init; }
     
     /// <summary>
     ///     Meter information of the charger, if available.
